@@ -1,0 +1,10 @@
+downloader
+  #size in ko
+  minsize
+  maxsize
+  #max number of concurrent thread downloading
+  maxconcurrency
+
+storage
+  bufferoutputstream
+    buffersize
