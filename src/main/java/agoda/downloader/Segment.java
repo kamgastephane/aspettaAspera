@@ -71,7 +71,15 @@ public class Segment {
     public DownloadStatus getStatus() {
         return status;
     }
-
+    public boolean isDownloading() {
+        return DownloadStatus.DOWNLOADING.equals(status);
+    }
+    public void downloading() {
+        status = DownloadStatus.DOWNLOADING;
+    }
+    public boolean isIdle() {
+        return DownloadStatus.IDLE.equals(status);
+    }
     public void setStatus(DownloadStatus status) {
         this.status = status;
     }

@@ -47,11 +47,16 @@ public class DownloaderRunnable implements Runnable {
                 byte[] data = handler.download(segmentThreadLocal.get().getSrcUrl(), start);
                 long watchEnd = System.currentTimeMillis();
 
-                ResultMessage resultMessage = new ResultMessage(segmentThreadLocal.get().getSegmentIndex(),
-                        segmentThreadLocal.get().getStatus(),data);
-                queue.put(resultMessage);
-
                 long byteRead = data.length;
+
+                if(byteRead > 0)
+                {
+                    ResultMessage resultMessage = new ResultMessage(segmentThreadLocal.get().getSegmentIndex(),
+                            segmentThreadLocal.get().getStatus(),data);
+                    queue.put(resultMessage);
+                }
+
+
                 segmentThreadLocal.get().update(byteRead,watchEnd - watchStart);
 
 

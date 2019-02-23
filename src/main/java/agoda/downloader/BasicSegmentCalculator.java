@@ -7,14 +7,27 @@ import java.util.List;
 
 public class BasicSegmentCalculator implements SegmentsCalculator {
 
+    private BasicSegmentCalculator()
+    {}
+
+    private static class BasicSegmentCalculatorSingleton
+    {
+        private static final BasicSegmentCalculator INSTANCE = new BasicSegmentCalculator();
+    }
+
+    public static BasicSegmentCalculator getInstance()
+    {
+        return BasicSegmentCalculatorSingleton.INSTANCE;
+    }
     @Override
     public List<Segment> getSegments(int desiredSegmentCount,DownloaderConfiguration configuration, DownloadInformation information) {
+
 
 
         List<Segment> segments = new ArrayList<>();
         int count = desiredSegmentCount;
 
-        if(!information.isAcceptRange()){
+        if(!information.isAcceptRange() || information.getSize() ==0){
 
             // we do not care anymore about the segment as the range request is not supported, we will try a single threaded download
             Segment unique = new Segment.SegmentBuilder()
@@ -24,8 +37,8 @@ public class BasicSegmentCalculator implements SegmentsCalculator {
                     .setSrcUrl(information.getSrcUrl())
                     .createSegment();
             segments.add(unique);
-        }
-        else {
+        } else if(information.isAcceptRange() && information.getSize()>0)
+         {
             long segmentSize = information.getSize() / (long)count;
                 if (segmentSize > configuration.getSegmentMaxSize())
             {

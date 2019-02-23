@@ -12,7 +12,7 @@ public class BasicSegmentCalculatorTest {
 
     @Test
     public void getSegmentsWhenTheRangeIsSetAtOff() {
-        BasicSegmentCalculator segmentCalculator = new BasicSegmentCalculator();
+        BasicSegmentCalculator segmentCalculator = BasicSegmentCalculator.getInstance();
 
         DownloadInformation fileWithoutRangeHeader = get(false,2 * 1024 * 1024);
         DownloaderConfiguration configuration = get(2 * 1024 * 1024,2 * 1024 * 1024,100);
@@ -41,7 +41,7 @@ public class BasicSegmentCalculatorTest {
 
     @Test
     public void getSegmentsWhenTheDefaultSegmentSizeIsLessThanTheSegmentMinSize() {
-        BasicSegmentCalculator segmentCalculator = new BasicSegmentCalculator();
+        BasicSegmentCalculator segmentCalculator =  BasicSegmentCalculator.getInstance();
         long size = 100 * 1024 * 1024;
         DownloadInformation file = get(true,size);
         DownloaderConfiguration configuration = get(2 * 1024 * 1024,500 * 1024 * 1024,100);
@@ -61,7 +61,7 @@ public class BasicSegmentCalculatorTest {
 
     @Test
     public void getSegmentsWhenTheDefaultSegmentSizeIsMoreThanTheSegmentMaxSize() {
-        BasicSegmentCalculator segmentCalculator = new BasicSegmentCalculator();
+        BasicSegmentCalculator segmentCalculator = BasicSegmentCalculator.getInstance();
         long size = 5 * 1024 * 1024 * 1024L + (1024 * 1024);
 
         DownloadInformation file = get(true,size); //5gb + 1mb

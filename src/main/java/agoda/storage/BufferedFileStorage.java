@@ -9,7 +9,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 
-class BufferedFileFileStorage extends FileStorage {
+class BufferedFileStorage extends FileStorage {
 
 
 
@@ -17,7 +17,7 @@ class BufferedFileFileStorage extends FileStorage {
     private BufferedOutputStream outputStream;
     private boolean isClosed;
 
-    BufferedFileFileStorage(String url, String destinationFolder, int bufferSize) throws IOException {
+    BufferedFileStorage(String url, String destinationFolder, int bufferSize) throws IOException {
 
         File file = getFile(url, destinationFolder,true);
         if (file != null) {

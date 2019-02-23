@@ -23,6 +23,14 @@ public class ResultMessage implements DownloaderMessage {
         this.content = content;
     }
 
+    public DownloadStatus getStatus() {
+        return status;
+    }
+
+    public byte[] getContent() {
+        return content;
+    }
+
     @Override
     public int getSegmentId() {
         return segmentId;

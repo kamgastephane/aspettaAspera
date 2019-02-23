@@ -1,7 +1,5 @@
 package agoda.storage;
 
-import agoda.storage.BufferedFileFileStorage;
-import agoda.storage.StorageUtils;
 import org.apache.commons.io.FileUtils;
 import org.junit.Assert;
 import org.junit.Test;
@@ -15,7 +13,7 @@ import java.util.List;
 
 import static org.junit.Assert.*;
 
-public class BufferedFileFileStorageTest {
+public class BufferedFileStorageTest {
 
     @Test
     public void init() {
@@ -25,7 +23,7 @@ public class BufferedFileFileStorageTest {
             tempFile =getTempDirectory();
 
             String url = "http://ipv4.download.thinkbroadband.com/5MB.zip";
-            BufferedFileFileStorage storage = new BufferedFileFileStorage(url,tempFile.getAbsolutePath(), (int)FileUtils.ONE_MB);
+            BufferedFileStorage storage = new BufferedFileStorage(url,tempFile.getAbsolutePath(), (int)FileUtils.ONE_MB);
             Assert.assertNotNull(storage);
 
             File f = new File(tempFile
@@ -58,7 +56,7 @@ public class BufferedFileFileStorageTest {
             tempFile =getTempDirectory();
 
             String url = "http://ipv4.download.thinkbroadband.com/5MB.zip";
-            BufferedFileFileStorage storage = new BufferedFileFileStorage(url,tempFile.getParentFile().getAbsolutePath(), (int)FileUtils.ONE_MB);
+            BufferedFileStorage storage = new BufferedFileStorage(url,tempFile.getParentFile().getAbsolutePath(), (int)FileUtils.ONE_MB);
             Assert.assertNotNull(storage);
             String txt = "the dog is in the house";
             byte[] bytes = txt.concat(System.lineSeparator()).getBytes(StandardCharsets.UTF_8);
