@@ -6,125 +6,87 @@ import org.apache.logging.log4j.Logger;
 
 import java.util.Date;
 
-
-public class Segment {
+/**
+ * Note: this class has a natural ordering that is inconsistent with equals
+ */
+public class Segment implements Comparable<Segment> {
 
     private static final Logger logger = LogManager.getLogger();
 
-    private long startPosition;
-    private int segmentIndex;
-    private String srcUrl;
-    private long initialStartPosition;
-    private long endPosition;
-    private DownloadException lastError;
-    private DownloadStatus status;
-    private Date lastReception;
-
-    private double rate;// rate in kbit/s
-    private int currentTry = 1;
-    private int maxRetry;
+    protected int segmentIndex;
+    protected String srcUrl;
+    protected long initialStartPosition;
+    protected long endPosition;
+    protected DownloadStatus status;
+    protected long startPosition;
+    protected int currentTry = 1;
+    protected int maxRetry;
+    protected long requestRange;
 
 
-    private Segment(int segmentIndex, String srcUrl, long initialStartPosition, long endPosition, int maxRetry, long requestRange) {
+    protected Segment(int segmentIndex, String srcUrl, long initialStartPosition, long endPosition, int maxRetry, long requestRange) {
         this.segmentIndex = segmentIndex;
         this.srcUrl = srcUrl;
         this.initialStartPosition = initialStartPosition;
         this.endPosition = endPosition;
         this.maxRetry = maxRetry;
+        this.requestRange = requestRange;
     }
 
-    public  void update(long range,long durationInMs)
-    {
-        if(range == 0)
-        {
-            //i did not receive any data something may be wron so i consider it as an error
-            logger.warn("Received empty response from server for url {} on segment {}",srcUrl,segmentIndex);
-
-            boolean canRetry = canRetry();
-            if(!canRetry)
-            {
-                //we set the status in error
-                lastError = new DownloadException("Received too many empty response from server",null);
-                status = DownloadStatus.ERROR;
-            }
-        }
-        else{
-
-            //as we are always resetting the counter, a server could abuse us and send data 1 out of three time :D
-            currentTry = 1;
-            this.startPosition+=range;
-            this.lastReception = new Date();
-            if(startPosition>=endPosition)
-            {
-                this.status = DownloadStatus.FINISHED;
-            }
-            double sizeInKbit = (range * 8)/1000D;
-            double durationInSec = durationInMs/1000D;
-            rate = sizeInKbit/durationInSec;
-            logger.info("Received {}kbit from server for url {} on segment {}, currentStatus:{} ",sizeInKbit,srcUrl,segmentIndex,status.toString());
-
-        }
-
-        //TODO here i should add heuristics to handle low or fast connections by tweaking
-    }
-
-    public DownloadStatus getStatus() {
+    DownloadStatus getStatus() {
         return status;
     }
-    public boolean isDownloading() {
-        return DownloadStatus.DOWNLOADING.equals(status);
-    }
-    public void downloading() {
-        status = DownloadStatus.DOWNLOADING;
-    }
-    public boolean isIdle() {
-        return DownloadStatus.IDLE.equals(status);
-    }
-    public void setStatus(DownloadStatus status) {
+
+    void setStatus(DownloadStatus status) {
         this.status = status;
     }
 
-    public synchronized void setLastReception(Date lastReception) {
-        this.lastReception = lastReception;
+    boolean isDownloading() {
+        return DownloadStatus.DOWNLOADING.equals(status);
+    }
+
+    boolean isFinished() {
+        return DownloadStatus.FINISHED.equals(status);
+    }
+
+    void downloading() {
+        status = DownloadStatus.DOWNLOADING;
+    }
+
+    boolean isIdle() {
+        return DownloadStatus.IDLE.equals(status);
     }
 
 
 
-    public synchronized void setRate(double rate) {
-        this.rate = rate;
-    }
-
-    public int getSegmentIndex() {
+    int getSegmentIndex() {
         return segmentIndex;
     }
 
-    public long getStartPosition() {
+    long getStartPosition() {
         return startPosition;
     }
 
-    public long getInitialStartPosition() {
+    long getInitialStartPosition() {
         return initialStartPosition;
     }
 
-    public long getEndPosition() {
+    long getEndPosition() {
         return endPosition;
     }
 
-    public DownloadException getLastError() {
-        return lastError;
-    }
 
-    public void setLastError(DownloadException lastError) {
-        this.lastError = lastError;
-    }
-
-    public String getSrcUrl() {
+    String getSrcUrl() {
         return srcUrl;
     }
 
-    public boolean canRetry() {
-        currentTry++;
-        return currentTry <= maxRetry;
+    protected void setStartPosition(long startPosition) {
+        this.startPosition = startPosition;
+    }
+
+    @Override
+    public int compareTo(Segment o) {
+        return this.getSegmentIndex() - o.getSegmentIndex();
     }
 
     public static class SegmentBuilder {
@@ -135,36 +97,37 @@ public class Segment {
         private int maxRetry;
         private long requestRange = 2 * FileUtils.ONE_MB;
 
-        public SegmentBuilder setSegmentIndex(int segmentIndex) {
+        SegmentBuilder setSegmentIndex(int segmentIndex) {
             this.segmentIndex = segmentIndex;
             return this;
         }
 
-        public SegmentBuilder setSrcUrl(String srcUrl) {
+        SegmentBuilder setSrcUrl(String srcUrl) {
             this.srcUrl = srcUrl;
             return this;
         }
 
-        public SegmentBuilder setInitialStartPosition(long initialStartPosition) {
+        SegmentBuilder setInitialStartPosition(long initialStartPosition) {
             this.initialStartPosition = initialStartPosition;
             return this;
         }
 
-        public SegmentBuilder setEndPosition(long endPosition) {
+        SegmentBuilder setEndPosition(long endPosition) {
             this.endPosition = endPosition;
             return this;
         }
 
-        public SegmentBuilder setMaxRetry(int maxRetry) {
+        SegmentBuilder setMaxRetry(int maxRetry) {
             this.maxRetry = maxRetry;
             return this;
         }
 
-        public void setRequestRange(long requestRange) {
+        SegmentBuilder setRequestRange(long requestRange) {
             this.requestRange = requestRange;
+            return this;
         }
 
-        public Segment createSegment() {
+        Segment createSegment() {
             return new Segment(segmentIndex, srcUrl, initialStartPosition, endPosition, maxRetry, requestRange);
         }
     }

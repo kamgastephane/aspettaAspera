@@ -14,10 +14,10 @@ public final class StorageUtils {
     static String getIncrementalFileName(int count, String filename) {
         String extension = FilenameUtils.getExtension(filename);
         String nakedFileName = FilenameUtils.removeExtension(filename);
-        return nakedFileName + "_" + count + "."+extension;
+        return nakedFileName + "_" + count + "." + extension;
     }
 
-     static String getFileNameBasedOnUrl(@NotNull String inputUrl) throws MalformedURLException {
+    static String getFileNameBasedOnUrl(@NotNull String inputUrl) throws MalformedURLException {
         URL url = null;
         url = new URL(inputUrl);
 

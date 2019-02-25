@@ -1,17 +1,18 @@
 package agoda.downloader;
 
 import agoda.storage.Storage;
-import org.junit.Assert;
+import org.junit.Test;
 
 import java.io.IOException;
 import java.util.List;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
 
 public class ControllerStatusTest {
 
 
-    public void getTheNextSegmentToDownloadRespectToTheAllowedAccuracy()
+    @Test
+    public void testThatget_TheNextSegmentToDownload_RespectTheAllowedAccuracy()
     {
         ControllerStatus.Builder builder = new ControllerStatus.Builder();
         builder = builder.init(5);
@@ -19,6 +20,7 @@ public class ControllerStatusTest {
             Segment segment = new Segment.SegmentBuilder()
                     .setSegmentIndex(i)
                     .createSegment();
+            segment.setStatus(DownloadStatus.IDLE);
             Storage storage = new Storage() {
                 @Override
                 public boolean push(byte[] buffer) {
@@ -28,6 +30,11 @@ public class ControllerStatusTest {
                 @Override
                 public void close() throws IOException {
 
+                }
+
+                @Override
+                public boolean reset() {
+                    return false;
                 }
             };
             builder.add(segment,storage);

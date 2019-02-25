@@ -7,8 +7,8 @@ import java.net.URI;
 import java.net.URISyntaxException;
 
 /**
- *  this small factory will return the appropriate handler based on the protocol.
- *  To handle a new protocol, we should add it the following switch...case block
+ * this small factory will return the appropriate handler based on the protocol.
+ * To handle a new protocol, we should add it the following switch...case block
  */
 public class ProtocolHandlerFactory {
 
@@ -19,7 +19,7 @@ public class ProtocolHandlerFactory {
         try {
             uri = new URI(url);
         } catch (URISyntaxException e) {
-            logger.error("Received an malformed uri: "+url,e);
+            logger.error("Received an malformed uri: " + url, e);
             return null;
         }
         String scheme = uri.getScheme();

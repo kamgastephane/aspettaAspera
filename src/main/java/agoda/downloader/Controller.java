@@ -10,6 +10,7 @@ import agoda.storage.StorageFactory;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -19,81 +20,57 @@ import java.util.stream.Collectors;
 
 public class Controller {
 
+    private static final Logger logger = LogManager.getLogger();
+    ExecutorService pool;
+    ControllerStatus controllerStatus;
     private int maxConcurrentDownload;
     private String url;
     private Configuration configuration;
-    private static final Logger logger = LogManager.getLogger();
-    private ExecutorService pool;
     private ProtocolHandler protocolHandler;
-    private  SegmentsCalculator segmentsCalculator;
-    private   DownloadInformation downloadInformation;
-    private  LinkedBlockingQueue<ResultMessage> queue;
-    private ControllerStatus controllerStatus;
+    private SegmentsCalculator segmentsCalculator;
+    private DownloadInformation downloadInformation;
+    private LinkedBlockingQueue<ResultMessage> queue;
+    private long totalSaved = 0;
 
-    public Controller( Configuration configuration, int maxConcurrentDownload, String url) {
+    public Controller(String url,Configuration configuration, int maxConcurrentDownload,SegmentsCalculator segmentsCalculator,ProtocolHandler handler) {
         this.maxConcurrentDownload = maxConcurrentDownload;
         this.url = url;
         this.configuration = configuration;
 
-        ProtocolHandler protocolHandler = ProtocolHandlerFactory.get(url);
-        if(protocolHandler == null)
-        {
-            //TODO handle more than one URL
-            //TODO test this
-            logger.error("Received url {} but no protocol handler defined for it", url);
-            throw new IllegalArgumentException("no protocol handler found for url" + url);
-        }
 
-        //we create the pool
-        segmentsCalculator = BasicSegmentCalculator.getInstance();
+        this.segmentsCalculator = segmentsCalculator;
+        this.protocolHandler = handler;
 
     }
-    Map<String,List<Storage>> initStorage(List<Segment> segments)
-    {
-        if(segments.size() == 1)
-        {
-            Storage storage = StorageFactory.getStorage(segments.get(0).getSrcUrl(),configuration.getStorageConfiguration().getDownloadFolder(),
-                    configuration.getStorageConfiguration().getOutputStreamBufferSize());
-            if(storage == null)
-            {
-                return Collections.emptyMap();
-            }
-            else
-            {
-                return Collections.singletonMap(segments.get(0).getSrcUrl(), Collections.singletonList(storage));
-            }
-        }
-        else {
-            HashMap<String,List<Storage>> storageMap = new HashMap<>();
-            List<String> failedUrl = new ArrayList<>();
-            for (int i = 0; i < segments.size(); i++) {
-                if(!failedUrl.contains(segments.get(i).getSrcUrl()))
-                {
-                    Storage storage = StorageFactory.getStorage(segments.get(i).getSrcUrl(),configuration.getStorageConfiguration().getDownloadFolder(),
-                            configuration.getStorageConfiguration().getOutputStreamBufferSize());
-                    if(storage == null)
+    //TODO create Storage only when realy required , using Supplier
+    Map<String, List<Storage>> initStorage(List<Segment> segments) {
+
+        HashMap<String, List<Storage>> storageMap = new HashMap<>();
+        List<String> failedUrl = new ArrayList<>();
+        for (Segment segment : segments) {
+            if (!failedUrl.contains(segment.getSrcUrl())) {
+                Storage storage = StorageFactory.getStorage(segment.getSrcUrl(), configuration.getStorageConfiguration().getDownloadFolder(),
+                        configuration.getStorageConfiguration().getOutputStreamBufferSize());
+                if (storage == null) {
+                    failedUrl.add(segment.getSrcUrl());
+                } else {
+                    if (storageMap.containsKey(segment.getSrcUrl()))
                     {
-                        failedUrl.add(segments.get(i).getSrcUrl());
-                    }else {
-                        storageMap.compute(segments.get(i).getSrcUrl(),(s, storages) ->
-                        {
-                            if(storages == null)
-                            {
-                                return Collections.singletonList(storage);
-                            }else {
-                                storages.add(storage);
-                                return storages;
-                            }
-                        });
+                        storageMap.get(segment.getSrcUrl()).add(storage);
+                    }else{
+                        List<Storage> list = new ArrayList<>();
+                        list.add(storage);
+                        storageMap.put(segment.getSrcUrl(),list);
                     }
                 }
             }
-            return storageMap;
-
         }
+        return storageMap;
+
+
     }
-    public void setup()
-    {
+
+    public void setup() {
         //fetch the info about the file
         downloadInformation = getFileInformation(maxConcurrentDownload);
 
@@ -101,13 +78,14 @@ public class Controller {
         List<Segment> segmentList = createSegments();
 
 
-        int effectiveConcurrency = Math.min(maxConcurrentDownload,segmentList.size());
+        int effectiveConcurrency = Math.min(maxConcurrentDownload, segmentList.size());
 
         //create the queue
-         queue = new LinkedBlockingQueue<>();
+        queue = new LinkedBlockingQueue<>();
 
-         //create the thread pool
+        //create the thread pool
         pool = Executors.newFixedThreadPool(effectiveConcurrency);
+
 
         //create the storage
         Map<String, List<Storage>> storages = initStorage(segmentList);
@@ -121,16 +99,15 @@ public class Controller {
         segmentByUrl.forEach((url, segments) ->
         {
             List<Storage> storageForUrl = storages.get(url);
-            if(storageForUrl ==null  )
-            {
-                //i failed to create storage for this specifuc url to download: abort
-                logger.info("Downlaod of the url {} will be cancelled",url);
-            }else if(segments.size() != storages.size()){
-                //this shoud never happened
-                logger.fatal("This is quite unusual, i have storage not corresponding to the segments to download! Downlaod of the url {} will be cancelled",url);
-            }else{
+            if (storageForUrl == null) {
+                //i failed to create storage for this specific url to download: abort
+                logger.info("Download of the url {} will be cancelled", url);
+            } else if (segments.size() != storageForUrl.size()) {
+                //this should never happened
+                logger.fatal("This is quite unusual, i have storage not corresponding to the segments to download! Download of the url {} will be cancelled", url);
+            } else {
                 for (int i = 0; i < segments.size(); i++) {
-                    builder.add(segments.get(i),storageForUrl.get(i));
+                    builder.add(segments.get(i), storageForUrl.get(i));
                 }
             }
         });
@@ -138,18 +115,23 @@ public class Controller {
     }
 
 
-    public void run()
-    {
-        List<Segment> next = controllerStatus.getNext();
-        if(next.size()>0)
+    public void run() {
+
+        while (controllerStatus.getDownloading().size()>0 || controllerStatus.getIdles().size()>0)
         {
-            //we create the runnable task
-            for (Segment segment : next)
-            {
-                ProtocolHandler protocolHandler = ProtocolHandlerFactory.get(segment.getSrcUrl());
-                //the protocol handler cannot be null because of the constructor check
-                DownloaderRunnable runnable = new DownloaderRunnable(segment,protocolHandler,queue);
-                Future<?> submit = pool.submit(runnable);
+            //if i have some segments still downloading or either idle i wait
+
+            List<Segment> next = controllerStatus.getNext();
+            if (next.size() > 0) {
+                //we create the runnable task
+                for (Segment segment : next) {
+                    //the protocol handler cannot be null because of the constructor check
+                    segment.setStatus(DownloadStatus.DOWNLOADING);
+                    DownloaderRunnable runnable = new DownloaderRunnable(segment, protocolHandler, queue);
+
+                    Future future = pool.submit(runnable);
+                    controllerStatus.addFutureRelatedTo(segment.getSegmentIndex(), future);
+                }
             }
             try {
                 ResultMessage message = queue.take();
@@ -157,69 +139,137 @@ public class Controller {
             } catch (InterruptedException e) {
                 //something really bad happened
                 //i can cleanup all unfinished download
-                //TODO
-            }
-        }else
-        //no segment to handle, either the concurrency threshold was met or im done
 
-        {
-            if(!controllerStatus.hasIdle())
-            {
-                //i'm done downloading! youpiii!! i should now join the piece if required
+                List<Segment> idleSegment = controllerStatus.getIdles();
+                List<Segment> downloadingSegment = controllerStatus.getDownloading();
 
-                //TODO
+                abortDownloadFor(idleSegment);
+                abortDownloadFor(downloadingSegment);
+
             }
         }
+        //i'm done => all segments downloaded or al in error i will return
+
+
 
 
     }
 
-    private void handleMessage(DownloaderMessage message)
-    {
-        if(DownloaderMessage.Type.RESULT == message.getType())
-        {
-            ResultMessage resultMessage = (ResultMessage)message;
+    /**
+     * called when the download failed or an exception happened
+     *
+     * @param segments the list of segment we want to reset
+     */
+    private void abortDownloadFor(List<Segment> segments) {
+        for (Segment segment : segments) {
+            //interrupt all running thread related to this if they are still downloading
+            segment.setStatus(DownloadStatus.ERROR);
+
+            Future task = controllerStatus.getFutureRelatedTo(segment.getSegmentIndex());
+            if(task!=null && !task.isCancelled())task.cancel(true);
+
+            //clean all storage
+            Storage storage = controllerStatus.getStorage(segment.getSegmentIndex());
+            storage.reset();
+        }
+    }
+
+    /**
+     * called when the download failed or an exception happened
+     *
+     * @param url the url we want to stop downloading
+     */
+    private void abortDownloadFor(String url) {
+        List<Segment> segmentRelatedTo = controllerStatus.getSegmentRelatedTo(url);
+        abortDownloadFor(segmentRelatedTo);
+
+    }
+    private void handleMessage(DownloaderMessage message) {
+        Segment segment = controllerStatus.getSegment(message.getSegmentId());
+
+        if (DownloaderMessage.Type.RESULT == message.getType()) {
+            ResultMessage resultMessage = (ResultMessage) message;
+            //if the task is still downloading or finished and it is not in error, we saved the bytes received
             if (DownloadStatus.DOWNLOADING == resultMessage.getStatus() ||
-                    DownloadStatus.FINISHED == resultMessage.getStatus())
-            {
-                Storage storage = controllerStatus.getStorage(message.getSegmentId());
-                storage.push(resultMessage.getContent());
-
+                    DownloadStatus.FINISHED == resultMessage.getStatus()) {
+                    if(resultMessage.getContent()!=null && resultMessage.getContent().length>0){
+                        Storage storage = controllerStatus.getStorage(message.getSegmentId());
+                        storage.push(resultMessage.getContent());
+                        totalSaved+=resultMessage.getContent().length;
+                    }
             }
-            if (DownloadStatus.FINISHED == resultMessage.getStatus())
-            {
-                run();
+            if (DownloadStatus.FINISHED == resultMessage.getStatus()) {
+                try {
+                    controllerStatus.getStorage(segment.getSegmentIndex()).close();
+                    segment.setStatus(DownloadStatus.FINISHED);
 
-            }
-            else if(DownloadStatus.ERROR == resultMessage.getStatus())
-            {
-                //TODO cleanup
-                // i should interrupt all donwload related to this URL
-                //i should cleanup all storage related to this url
-            }
+                } catch (IOException e) {
+                    logger.error("error while closing the storage stream for " + segment.getSrcUrl(), e);
+                    abortDownloadFor(segment.getSrcUrl());
+                }
+                if (controllerStatus.areAllDownloadsRelatedToFinished(segment.getSrcUrl())) {
+                    try {
+                        joinSegments(segment.getSrcUrl());
+                        logger.info("{} fully downloaded at with {} kbs", segment.getSrcUrl(),totalSaved/1024);
 
+                    } catch (IOException e) {
+                        logger.error("error while joining the storage stream for " + segment.getSrcUrl(), e);
+                        abortDownloadFor(segment.getSrcUrl());
+
+                    }
+                }
+            } else if (DownloadStatus.ERROR == resultMessage.getStatus()) {
+                abortDownloadFor(segment.getSrcUrl());
+            }
+        }
+
+    }
+
+    public long getTotalSaved() {
+        return totalSaved;
+    }
+
+    /**
+     * call when all segments finished downloading
+     *
+     * @param url the url of the finished download
+     */
+    private void joinSegments(String url) throws IOException {
+        List<Segment> segments = controllerStatus.getSegmentRelatedTo(url);
+        if(segments.size()>1)
+        {
+            //we order the segmentlist based on the the segmentIndex
+            Collections.sort(segments);
+
+            //we fetch all the storage related
+            List<Storage> storageList = new ArrayList<>();
+            segments.forEach(segment -> storageList.add(controllerStatus.getStorage(segment.getSegmentIndex())));
+
+
+            Storage.join(storageList,true);
         }
 
 
+    }
+
+    private List<Segment> createSegments() {
+        List<Segment> segments = segmentsCalculator.getSegments(maxConcurrentDownload, configuration.getDownloaderConfiguration(), downloadInformation);
+        segments.forEach(segment -> segment.setStatus(DownloadStatus.IDLE));
+        return segments;
 
     }
-    private List<Segment> createSegments()
-    {
-        return segmentsCalculator.getSegments(maxConcurrentDownload, configuration.getDownloaderConfiguration(), downloadInformation);
-    }
-    private DownloadInformation getFileInformation(int maxAttempts)
-    {
+
+    private DownloadInformation getFileInformation(int maxAttempts) {
         //we maintain the same logic and request this a few time until declaring failure
         int attempt = 1;
 
-        DownloadInformation info =  new DownloadInformation(url,false,0);
-        while ( attempt <= maxAttempts)
-        {
+        DownloadInformation info = new DownloadInformation(url, false, 0);
+        while (attempt <= maxAttempts) {
             try {
-                info = protocolHandler.getInfo(this.url);
+                return protocolHandler.getInfo(this.url);
 
             } catch (DownloadException e) {
-                logger.error(String.format("Error while retrieving the information related to %s attempt %d max attempt allowed %d",url,attempt,maxAttempts),e);
+                logger.error(String.format("Error while retrieving the information related to %s attempt %d max attempt allowed %d", url, attempt, maxAttempts), e);
                 attempt++;
             }
 

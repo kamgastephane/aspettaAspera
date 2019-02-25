@@ -2,8 +2,14 @@ package agoda.downloader.messaging;
 
 public interface DownloaderMessage {
 
-    public enum Type
-    {
+    /**
+     * @return the ID of the segment this message is related to
+     */
+    int getSegmentId();
+
+    Type getType();
+
+    enum Type {
         /**
          * message to notify the the segment download should be aborted
          */
@@ -13,13 +19,6 @@ public interface DownloaderMessage {
          */
         RESULT
     }
-
-    /**
-     * @return  the ID of the segment this message is related to
-     */
-    public int getSegmentId();
-
-    public Type getType();
 
 
 }

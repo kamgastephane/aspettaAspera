@@ -1,6 +1,6 @@
 package agoda.configuration;
 
-public class ConfigurationImpl implements Configuration{
+public class ConfigurationImpl implements Configuration {
 
     private DownloaderConfiguration downloaderConfiguration;
 

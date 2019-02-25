@@ -13,82 +13,103 @@ public class DownloaderRunnable implements Runnable {
 
     private static final Logger logger = LogManager.getLogger();
 
-    private static ThreadLocal<Segment> segmentThreadLocal = new ThreadLocal<>();
-    ProtocolHandler handler;
-    LinkedBlockingQueue<ResultMessage> queue;
+    private ProtocolHandler handler;
+    private LinkedBlockingQueue<ResultMessage> queue;
+    private DownloadBlock block;
+    DownloaderRunnable(Segment segment, ProtocolHandler protocolHandler, LinkedBlockingQueue<ResultMessage> resultMessageBlockingQueue) {
 
-    public DownloaderRunnable(Segment segment,ProtocolHandler protocolHandler, LinkedBlockingQueue<ResultMessage> resultMessageBlockingQueue)
-    {
 
-        this.handler = protocolHandler;
-        segmentThreadLocal.set(segment);
-        this.queue = resultMessageBlockingQueue;
+            this.handler = protocolHandler;
+            block = new DownloadBlock(segment);
+            queue = resultMessageBlockingQueue;
+
+
     }
 
     @Override
     public void run() {
 
-        segmentThreadLocal.get().setStatus(DownloadStatus.DOWNLOADING);
+        //we use thread local as a hack to provide synchronization
+        //we can guarantee that the copy hold by the controller is not affecting this one
 
-        while (!Thread.interrupted() && segmentThreadLocal.get().getStatus() == DownloadStatus.DOWNLOADING)
-        {
-            long start = segmentThreadLocal.get().getStartPosition();
-            if (segmentThreadLocal.get().getStartPosition() == 0)
-            {
-                //we are just starting with this segment
-                logger.info("start handling segment {} with range [{} - {}]",segmentThreadLocal.get().getSegmentIndex()
-                        ,segmentThreadLocal.get().getInitialStartPosition(),segmentThreadLocal.get().getEndPosition());
+        block.setStatus(DownloadStatus.DOWNLOADING);
 
-                start = segmentThreadLocal.get().getInitialStartPosition();
-            }
+        while (!Thread.currentThread().isInterrupted() && block.getStatus() == DownloadStatus.DOWNLOADING) {
+            long start = block.getStartPosition();
+
 
             try {
                 long watchStart = System.currentTimeMillis();
-                byte[] data = handler.download(segmentThreadLocal.get().getSrcUrl(), start);
+                byte[] data = handler.download(block.getSrcUrl(), start);
                 long watchEnd = System.currentTimeMillis();
 
-                long byteRead = data.length;
-
-                if(byteRead > 0)
+                if(data == null)
                 {
-                    ResultMessage resultMessage = new ResultMessage(segmentThreadLocal.get().getSegmentIndex(),
-                            segmentThreadLocal.get().getStatus(),data);
-                    queue.put(resultMessage);
+                    //null signals a requested end of the transmission by the protocol
+                    block.setStatus(DownloadStatus.FINISHED);
+                    break;
+                }
+                else{
+                    long byteRead = data.length;
+
+
+                    //we truncate the data received if we are out of bound => we are bigger than the size of the segment
+                    boolean outOfBounds = block.isRangeOutOfBounds(byteRead);
+                    if(outOfBounds)
+                    {
+                        int byteRequired = (int)(block.getEndPosition()-start)+1;
+
+                        byte[]copy = new byte[byteRequired];
+                        System.arraycopy(data,0,copy,0,byteRequired);
+                        byteRead = byteRequired;
+                        data = copy;
+                    }
+                    block.update(byteRead, watchEnd - watchStart);
+
+                    if (byteRead > 0) {
+                        ResultMessage resultMessage = new ResultMessage(block.getSegmentIndex(),
+                                block.getStatus(), data);
+                        queue.put(resultMessage);
+
+                    }
                 }
 
 
-                segmentThreadLocal.get().update(byteRead,watchEnd - watchStart);
+
 
 
             } catch (DownloadException e) {
-                logger.error(e.getMessage(),e.getCause());
-                segmentThreadLocal.get().setLastError(e);
-
-                if(!segmentThreadLocal.get().canRetry())
+                logger.error(e.getMessage(), e.getCause());
+                block.setLastError(e);
+                if(e.getCause() instanceof InterruptedException)
                 {
-                    segmentThreadLocal.get().setStatus(DownloadStatus.ERROR);
+                    logger.error("Interrupted exception while pushing message to manager with status " + block.getStatus().toString(), e);
+                    break;
+
+                }
+                if (!block.canRetry()) {
+                    block.setStatus(DownloadStatus.ERROR);
                     break;
                 }
             } catch (InterruptedException e) {
-                logger.error("Interrupted exception while pushing message to manager with status "+segmentThreadLocal.get().getStatus().toString(),e);
+                logger.error("Interrupted exception while pushing message to manager with status " + block.getStatus().toString(), e);
                 break;
             }
 
         }
         //when i get here i am either interrupted, in an error state or finished state
 
-        ResultMessage resultMessage = new ResultMessage(segmentThreadLocal.get().getSegmentIndex(),
-                segmentThreadLocal.get().getStatus());
+        ResultMessage resultMessage = new ResultMessage(block.getSegmentIndex(),
+                block.getStatus());
 
         try {
             queue.put(resultMessage);
         } catch (InterruptedException e) {
-            logger.error("Interrupted exception while pushing message to manager with status "+segmentThreadLocal.get().getStatus().toString(),e);
+            logger.error("Interrupted exception while pushing message to manager with status " + block.getStatus().toString(), e);
         }
 
 
     }
-
 
 
 }

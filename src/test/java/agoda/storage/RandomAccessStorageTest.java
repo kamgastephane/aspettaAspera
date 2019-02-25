@@ -1,6 +1,6 @@
 package agoda.storage;
 
-import agoda.storage.RandomAccessFileFileStorage;
+import agoda.downloader.TestUtils;
 import org.apache.commons.io.FileUtils;
 import org.junit.Test;
 
@@ -8,13 +8,12 @@ import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.util.*;
 import java.util.concurrent.*;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertArrayEquals;
 
-public class RandomAccessFileFileStorageTest {
+public class RandomAccessStorageTest {
 
     @Test
     public void testJoiningAfterWritingOnMultipleFiles()
@@ -25,13 +24,13 @@ public class RandomAccessFileFileStorageTest {
         String url = "http://ipv4.download.thinkbroadband.com/5MB.txt";
 
         try {
-            tempFile = getTempDirectory();
-            List<RandomAccessFileFileStorage> storages = new ArrayList<>();
+            tempFile = FileUtils.getTempDirectory();
+            List<Storage> storages = new ArrayList<>();
             final Random r = new Random();
             List<byte[]> expecteds = new ArrayList<>();
             for (int i = 0; i < 5; i++)
             {
-                RandomAccessFileFileStorage rafs = new RandomAccessFileFileStorage(url,tempFile.getParentFile().getAbsolutePath());
+                RandomAccessStorage rafs = new RandomAccessStorage(url,tempFile.getAbsolutePath());
                 byte[] src = new byte[chunk];
                 r.nextBytes(src);
                 rafs.push(src);
@@ -50,9 +49,14 @@ public class RandomAccessFileFileStorageTest {
                 raf.close();
 
             }
-            RandomAccessFileFileStorage[] rafsArray = new RandomAccessFileFileStorage[storages.size()];
-            storages.toArray(rafsArray);
-            RandomAccessFileFileStorage.join(rafsArray);
+            storages.forEach(storage -> {
+                try {
+                    storage.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            });
+            RandomAccessStorage.join(storages,true);
 
             //we now have a single file which should contains all the bytes from the previous 4 other temp files
             File resultFile = new File(storages.get(0).fileName);
@@ -68,9 +72,12 @@ public class RandomAccessFileFileStorageTest {
 
             }
             raf.close();
-
-            for (int i = 0; i < storages.size(); i++) {
-                storages.get(i).cleanUp();
+            File main = new File(storages.get(0).fileName);
+            assert main.exists();
+            main.delete();
+            for (int i = 1; i < storages.size(); i++) {
+                File extras = new File(storages.get(i).fileName);
+                assert !extras.exists();
             }
 
         }catch (IOException e) {
@@ -79,10 +86,7 @@ public class RandomAccessFileFileStorageTest {
             FileUtils.deleteQuietly(tempFile);
         }
     }
-    private File getTempDirectory() throws IOException {
-        return Files.createTempDirectory("agoda").toFile();
 
-    }
     @Test
     public void testMultiWritingWithMultipleThreadWritingMultipleFile()
     {
@@ -92,17 +96,17 @@ public class RandomAccessFileFileStorageTest {
         final int  chunk = 1024;
 
         try {
-            tempFile = getTempDirectory();
-            List<RandomAccessFileFileStorage> storages = new ArrayList<>();
+            tempFile = TestUtils.getTempDirectory();
+            List<RandomAccessStorage> storages = new ArrayList<>();
             for (int i = 0; i < 5; i++)
             {
-                RandomAccessFileFileStorage randomAccessFileStorage = new RandomAccessFileFileStorage(url,tempFile.getParentFile().getAbsolutePath());
+                RandomAccessStorage randomAccessFileStorage = new RandomAccessStorage(url,tempFile.getAbsolutePath());
                 storages.add(randomAccessFileStorage);
             }
             final Random r = new Random();
             List<Future<byte[]>> results = new ArrayList<>();
 
-            final List<RandomAccessFileFileStorage> synchronizedList = Collections.synchronizedList(storages);
+            final List<RandomAccessStorage> synchronizedList = Collections.synchronizedList(storages);
             final ExecutorService executorService = Executors.newFixedThreadPool(5);
             for (int i = 0; i < 5; i++) {
                 final int index = i;
@@ -140,7 +144,7 @@ public class RandomAccessFileFileStorageTest {
 
 
             for (int i = 0; i < synchronizedList.size(); i++) {
-                synchronizedList.get(i).cleanUp();
+                synchronizedList.get(i).reset();
             }
 
 
@@ -162,19 +166,19 @@ public class RandomAccessFileFileStorageTest {
         File tempFile = null;
         int chunk = 1024 * 1024;
         try {
-            tempFile = getTempDirectory();
-            List<RandomAccessFileFileStorage> storages = new ArrayList<>();
+            tempFile = FileUtils.getTempDirectory();
+            List<RandomAccessStorage> storages = new ArrayList<>();
             for (int i = 0; i < 5; i++)
             {
                 int offset = chunk * i;
-                RandomAccessFileFileStorage randomAccessFileStorage = new RandomAccessFileFileStorage(url,tempFile.getParentFile().getAbsolutePath(),offset);
+                RandomAccessStorage randomAccessFileStorage = new RandomAccessStorage(url,tempFile.getAbsolutePath(),offset);
                 storages.add(randomAccessFileStorage);
             }
             String txt = "the dog is in the house";
 
             final byte[] bytes = txt.concat(System.lineSeparator()).getBytes(StandardCharsets.UTF_8);
 
-            final List<RandomAccessFileFileStorage> synchronizedList = Collections.synchronizedList(storages);
+            final List<RandomAccessStorage> synchronizedList = Collections.synchronizedList(storages);
             final ExecutorService executorService = Executors.newFixedThreadPool(5);
             for (int i = 0; i < 5; i++) {
                 final int index = i;

@@ -2,6 +2,7 @@ package agoda.downloader;
 
 import agoda.storage.Storage;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -24,89 +25,101 @@ public class ControllerStatus {
         this.concurrency = concurrency;
         this.tasks = new HashMap<>();
     }
-    public void updateStatus(int segmentIndex,DownloadStatus status)
-    {
-        segmentList.computeIfPresent(segmentIndex,(integer, segment) ->{
+
+    void updateStatus(int segmentIndex, DownloadStatus status) {
+        segmentList.computeIfPresent(segmentIndex, (integer, segment) -> {
             segment.setStatus(status);
             return segment;
         });
     }
-    public Storage getStorage(int segmentIndex)
-    {
+
+    Storage getStorage(int segmentIndex) {
         return storageList.get(segmentIndex);
     }
 
-    public boolean hasIdle()
-    {
-        return segmentList.values().stream().anyMatch(Segment::isIdle);
-    }
 
     /**
      * get the next segment to be fed to the {@link DownloaderRunnable} based on the concurrency allowed
      */
-    public List<Segment> getNext()
-    {
+    List<Segment> getNext() {
 
-        Map<DownloadStatus, List<Segment>> collect = segmentList.values().stream().collect(Collectors.groupingBy(Segment::getStatus));
-        int downloading = collect.get(DownloadStatus.DOWNLOADING).size();
+        Map<DownloadStatus, List<Segment>> segmentsGroupByState = segmentList.values().stream().collect(Collectors.groupingBy(Segment::getStatus));
+        List<Segment> downloadingSegments = segmentsGroupByState.get(DownloadStatus.DOWNLOADING);
+        int downloading = downloadingSegments == null? 0:downloadingSegments.size();
         int nextSize = concurrency - downloading;
-        if(nextSize > 0)
-        {
+        if (nextSize > 0) {
             //i can launch some more runnable
-            List<Segment> next = collect.get(DownloadStatus.IDLE).subList(0,nextSize);
-            next.forEach(Segment::downloading);
-            return next;
+            List<Segment> idleSegments = segmentsGroupByState.get(DownloadStatus.IDLE);
+            if(idleSegments!=null)
+            {
+                List<Segment> next = idleSegments.subList(0, nextSize);
+                next.forEach(Segment::downloading);
+                return next;
+            }
         }
-        return null;
+        return Collections.emptyList();
     }
 
-    public Future getFutureRelatedTo(int segmentId)
-    {
+    boolean areAllDownloadsRelatedToFinished(String url) {
+        List<Segment> segments = getSegmentRelatedTo(url);
+        return segments.stream().allMatch(Segment::isFinished);
+    }
+
+    List<Segment> getIdles() {
+        return segmentList.values().stream().filter(Segment::isIdle).collect(Collectors.toList());
+    }
+
+    List<Segment> getDownloading() {
+        return segmentList.values().stream().filter(Segment::isDownloading).collect(Collectors.toList());
+    }
+
+    Future getFutureRelatedTo(int segmentId) {
         return tasks.get(segmentId);
     }
-    public void addFutureRelatedTo(int segmentId,Future future)
-    {
-        tasks.put(segmentId,future);
+
+    void addFutureRelatedTo(int segmentId, Future future) {
+        tasks.put(segmentId, future);
     }
-    public List<Segment> getSegmentRelatedTo(String url)
-    {
+
+    List<Segment> getSegmentRelatedTo(String url) {
         return segmentList.values().stream().filter(segment -> segment.getSrcUrl().equals(url)).collect(Collectors.toList());
     }
 
-    public void incConcurrency()
-    {
+    Segment getSegment(int segmentId) {
+        return segmentList.get(segmentId);
+    }
+
+    void incConcurrency() {
         concurrency++;
     }
-    public void decConcurrency()
-    {
+
+    void decConcurrency() {
         concurrency--;
     }
-    public static class Builder{
+
+    static class Builder {
         private HashMap<Integer, Segment> segmentList = new HashMap<>();
         private HashMap<Integer, Storage> storageList = new HashMap<>();
         private int concurrency = 0;
-        public Builder init(int concurrency)
-        {
+
+        Builder init(int concurrency) {
             this.concurrency = concurrency;
             return this;
         }
-        public Builder add(Segment segment,Storage storage)
-        {
+
+        Builder add(Segment segment, Storage storage) {
             int key = segment.getSegmentIndex();
-            segmentList.putIfAbsent(key,segment);
-            storageList.putIfAbsent(key,storage);
+            segmentList.putIfAbsent(key, segment);
+            storageList.putIfAbsent(key, storage);
 
             return this;
         }
-        public ControllerStatus build()
-        {
-            if(concurrency == 0)throw new IllegalArgumentException("concurrency for downloader should be greater than 0");
-            return new ControllerStatus(segmentList,storageList,concurrency);
+
+        ControllerStatus build() {
+            if (concurrency == 0)
+                throw new IllegalArgumentException("concurrency for downloader should be greater than 0");
+            return new ControllerStatus(segmentList, storageList, concurrency);
         }
-
-
-
-
 
 
     }

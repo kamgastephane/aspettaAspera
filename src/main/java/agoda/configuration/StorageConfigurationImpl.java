@@ -3,11 +3,11 @@ package agoda.configuration;
 public class StorageConfigurationImpl implements StorageConfiguration {
 
 
-
     private int outputStreamBufferSize = 2 * 1024 * 1024;
 
-    private String DownloadFolder = null;
+    private int storageMode = 1;
 
+    private String downloadFolder = null;
 
 
     @Override
@@ -15,8 +15,10 @@ public class StorageConfigurationImpl implements StorageConfiguration {
         return outputStreamBufferSize;
     }
 
+
+
     @Override
     public String getDownloadFolder() {
-        return getDownloadFolder();
+        return downloadFolder;
     }
 }

@@ -11,7 +11,7 @@ public class DownloadInformation {
 
     private long size = 0;
 
-    public DownloadInformation(String srcUrl, boolean acceptRange, long size) {
+    DownloadInformation(String srcUrl, boolean acceptRange, long size) {
         this.srcUrl = srcUrl;
         this.acceptRange = acceptRange;
         this.size = size;
@@ -29,7 +29,7 @@ public class DownloadInformation {
         return size;
     }
 
-    public String getSrcUrl() {
+    String getSrcUrl() {
         return srcUrl;
     }
 }

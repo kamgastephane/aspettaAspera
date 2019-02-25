@@ -5,24 +5,24 @@ public class DownloadException extends Exception {
     private String url;
     private long segmentStart;
     private long segmentSize;
-    public DownloadException(String url,long segmentStart,long segmentSize,Throwable cause)
-    {
+
+    public DownloadException(String url, long segmentStart, long segmentSize, Throwable cause) {
         super(String.format("Exception %s occurred while downloading stream %s starting from segment %d of size %d"
-                ,cause.getClass().getName()
-                ,url
-                ,segmentStart
-                ,segmentSize)
-                ,cause);
+                , cause.getClass().getName()
+                , url
+                , segmentStart
+                , segmentSize)
+                , cause);
         this.segmentSize = segmentSize;
         this.segmentStart = segmentStart;
         this.url = url;
     }
-    public DownloadException(String url,Throwable cause)
-    {
+
+    public DownloadException(String url, Throwable cause) {
         super(String.format("Exception %s occurred while downloading stream %s "
-                ,cause.getClass().getName()
-                ,url)
-                ,cause);
+                , cause.getClass().getName()
+                , url)
+                , cause);
         this.url = url;
     }
 

@@ -16,9 +16,17 @@ public class DownloaderConfigurationImpl implements DownloaderConfiguration {
         return segmentMinSize;
     }
 
+    public void setSegmentMinSize(long segmentMinSize) {
+        this.segmentMinSize = segmentMinSize;
+    }
+
     @Override
     public long getSegmentMaxSize() {
         return segmentMaxSize;
+    }
+
+    public void setSegmentMaxSize(long segmentMaxSize) {
+        this.segmentMaxSize = segmentMaxSize;
     }
 
     @Override
@@ -26,20 +34,12 @@ public class DownloaderConfigurationImpl implements DownloaderConfiguration {
         return maxConcurrency;
     }
 
+    public void setMaxConcurrency(int maxConcurrency) {
+        this.maxConcurrency = maxConcurrency;
+    }
+
     @Override
     public int getMaxRetry() {
         return maxRetry;
-    }
-
-    public void setSegmentMinSize(long segmentMinSize) {
-        this.segmentMinSize = segmentMinSize;
-    }
-
-    public void setSegmentMaxSize(long segmentMaxSize) {
-        this.segmentMaxSize = segmentMaxSize;
-    }
-
-    public void setMaxConcurrency(int maxConcurrency) {
-        this.maxConcurrency = maxConcurrency;
     }
 }

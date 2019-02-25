@@ -9,17 +9,15 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 
-class BufferedFileStorage extends FileStorage {
-
+class BufferedStorage extends Storage {
 
 
     private static final Logger logger = LogManager.getLogger();
     private BufferedOutputStream outputStream;
-    private boolean isClosed;
 
-    BufferedFileStorage(String url, String destinationFolder, int bufferSize) throws IOException {
+    BufferedStorage(String url, String destinationFolder, int bufferSize) throws IOException {
 
-        File file = getFile(url, destinationFolder,true);
+        File file = getFile(url, destinationFolder, true);
         if (file != null) {
 
             this.fileName = file.getAbsolutePath();
@@ -33,11 +31,7 @@ class BufferedFileStorage extends FileStorage {
 
     }
 
-    /**
-     * push some bytes to to storage
-     * @param buffer the byte array we want to write to the storage
-     * @return true if the operation ended successfully, false otherwise
-     */
+
     @Override
     public boolean push(byte[] buffer) {
         //we should try to have close size between this byte array and the underlying bufferStream
@@ -52,6 +46,7 @@ class BufferedFileStorage extends FileStorage {
 
     /**
      * close the access to the underlying resource
+     *
      * @throws IOException
      */
     public void close() throws IOException {
@@ -60,7 +55,6 @@ class BufferedFileStorage extends FileStorage {
             outputStream.close();
         }
     }
-
 
 
 }

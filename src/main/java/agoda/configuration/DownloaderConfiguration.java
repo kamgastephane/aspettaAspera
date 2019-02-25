@@ -4,19 +4,22 @@ public interface DownloaderConfiguration {
     /**
      * min size of a file segment to be downloaded  by a single thread
      */
-    public long getSegmentMinSize();
+    long getSegmentMinSize();
+
     /**
      * max size of a file segment to be downloaded  by a single thread
      */
-    public long getSegmentMaxSize();
+    long getSegmentMaxSize();
+
     /**
      * max concurrency allowed between all downloads
      */
-    public int getMaxConcurrency();
+    int getMaxConcurrency();
+
     /**
      * max retry tentative for a single segment
      */
-    public int getMaxRetry();
+    int getMaxRetry();
 
 
 }
