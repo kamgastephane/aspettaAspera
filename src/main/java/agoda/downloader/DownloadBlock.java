@@ -19,7 +19,7 @@ public class DownloadBlock extends Segment {
 
     boolean isRangeOutOfBounds(long range)
     {
-        return (startPosition+range>=endPosition && endPosition>0);
+        return (startPosition+range>endPosition && endPosition>0);
     }
 
     void update(long range, long durationInMs) {
@@ -40,7 +40,7 @@ public class DownloadBlock extends Segment {
             this.startPosition += range;
             this.lastReception = new Date();
             //if the end position is <=0 we have a download with unknow size
-            if (startPosition >= endPosition && endPosition>0) {
+            if (startPosition > endPosition && endPosition>0) {
                 this.status = DownloadStatus.FINISHED;
             }
             double sizeInKbit = (range * 8) / 1000D;

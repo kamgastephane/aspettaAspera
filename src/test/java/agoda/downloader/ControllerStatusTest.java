@@ -1,5 +1,6 @@
 package agoda.downloader;
 
+import agoda.storage.LazyStorage;
 import agoda.storage.Storage;
 import org.junit.Test;
 
@@ -37,7 +38,8 @@ public class ControllerStatusTest {
                     return false;
                 }
             };
-            builder.add(segment,storage);
+
+            builder.add(segment,TestUtils.get(storage));
         }
         ControllerStatus status = builder.build();
         List<Segment> next = status.getNext();

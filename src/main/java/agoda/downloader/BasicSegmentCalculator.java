@@ -10,10 +10,12 @@ public class BasicSegmentCalculator implements SegmentsCalculator {
     private BasicSegmentCalculator() {
     }
 
-    public static BasicSegmentCalculator getInstance() {
+    static BasicSegmentCalculator getInstance() {
         return BasicSegmentCalculatorSingleton.INSTANCE;
     }
-
+    private static class BasicSegmentCalculatorSingleton {
+        private static final BasicSegmentCalculator INSTANCE = new BasicSegmentCalculator();
+    }
     @Override
     public List<Segment> getSegments(int desiredSegmentCount, DownloaderConfiguration configuration, DownloadInformation information) {
 
@@ -31,6 +33,7 @@ public class BasicSegmentCalculator implements SegmentsCalculator {
                     .setSrcUrl(information.getSrcUrl())
                     .createSegment();
             segments.add(unique);
+
         } else if (information.isAcceptRange() && information.getSize() > 0) {
             long segmentSize = information.getSize() / (long) count;
             if (segmentSize > configuration.getSegmentMaxSize()) {
@@ -73,7 +76,5 @@ public class BasicSegmentCalculator implements SegmentsCalculator {
 
     }
 
-    private static class BasicSegmentCalculatorSingleton {
-        private static final BasicSegmentCalculator INSTANCE = new BasicSegmentCalculator();
-    }
+
 }

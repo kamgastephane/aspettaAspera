@@ -24,7 +24,7 @@ public class RandomAccessStorageTest {
         String url = "http://ipv4.download.thinkbroadband.com/5MB.txt";
 
         try {
-            tempFile = FileUtils.getTempDirectory();
+            tempFile = TestUtils.getTempDirectory();
             List<Storage> storages = new ArrayList<>();
             final Random r = new Random();
             List<byte[]> expecteds = new ArrayList<>();
@@ -166,7 +166,7 @@ public class RandomAccessStorageTest {
         File tempFile = null;
         int chunk = 1024 * 1024;
         try {
-            tempFile = FileUtils.getTempDirectory();
+            tempFile = TestUtils.getTempDirectory();
             List<RandomAccessStorage> storages = new ArrayList<>();
             for (int i = 0; i < 5; i++)
             {

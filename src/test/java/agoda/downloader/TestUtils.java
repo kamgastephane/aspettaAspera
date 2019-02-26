@@ -4,6 +4,8 @@ import agoda.configuration.DownloaderConfiguration;
 import agoda.configuration.StorageConfiguration;
 import agoda.configuration.StorageConfigurationImpl;
 import agoda.protocols.ProtocolHandler;
+import agoda.storage.LazyStorage;
+import agoda.storage.Storage;
 import agoda.storage.StorageFactory;
 
 import java.io.File;
@@ -85,6 +87,10 @@ public class TestUtils {
                 return maxRetry;
             }
         };
+    }
+    static LazyStorage get(Storage storage)
+    {
+        return new LazyStorage(() -> storage);
     }
     static StorageConfiguration get(long bufferSize,File directory)
     {

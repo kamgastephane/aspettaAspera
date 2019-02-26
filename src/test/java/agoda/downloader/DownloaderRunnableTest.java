@@ -10,8 +10,6 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.nio.ByteBuffer;
-import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.Random;
 import java.util.concurrent.*;
@@ -131,7 +129,7 @@ public class DownloaderRunnableTest {
 
         ThreadPoolExecutor service = (ThreadPoolExecutor) Executors.newFixedThreadPool(1);
         Future future = service.submit(runnable);
-        TimeUnit.SECONDS.sleep(4);
+        TimeUnit.SECONDS.sleep(2);
 
 
         ResultMessage message = queue.take();
@@ -195,7 +193,7 @@ public class DownloaderRunnableTest {
 
         ThreadPoolExecutor service = (ThreadPoolExecutor) Executors.newFixedThreadPool(1);
         Future future = service.submit(runnable);
-        TimeUnit.SECONDS.sleep(4);
+        TimeUnit.SECONDS.sleep(2);
 
 
         ResultMessage message = queue.take();
@@ -218,7 +216,7 @@ public class DownloaderRunnableTest {
                 .setSegmentIndex(0)
                 .setRequestRange(1)
                 .setMaxRetry(maxRetry)
-                .setEndPosition(phrase.length())
+                .setEndPosition(phrase.length()-1)
                 .createSegment();
 
         ProtocolHandler mockHandler = new ProtocolHandler() {
@@ -255,18 +253,24 @@ public class DownloaderRunnableTest {
 
         ThreadPoolExecutor service = (ThreadPoolExecutor) Executors.newFixedThreadPool(1);
         Future future = service.submit(runnable);
-        TimeUnit.SECONDS.sleep(4);
+        TimeUnit.SECONDS.sleep(2);
 
 
         int messageExpected = phrase.length();
-        for (int i = 0; i < messageExpected; i++) {
+        for (int i = 0; i < messageExpected-1; i++) {
             ResultMessage message = queue.take();
-            assert message.getStatus() == DownloadStatus.DOWNLOADING;
+            Assert.assertEquals(message.getStatus(), DownloadStatus.DOWNLOADING);
             char c = phrase.charAt(i);
             byte[] buffer = Character.toString(c).getBytes();
             Assert.assertArrayEquals(buffer, message.getContent());
         }
-        TimeUnit.SECONDS.sleep(4);
+        ResultMessage message = queue.take();
+        Assert.assertEquals(message.getStatus(), DownloadStatus.FINISHED);
+        char c = phrase.charAt(messageExpected-1);
+        byte[] buffer = Character.toString(c).getBytes();
+        Assert.assertArrayEquals(buffer, message.getContent());
+
+        TimeUnit.SECONDS.sleep(1);
         assert service.getActiveCount() == 0;
 
 
@@ -281,7 +285,7 @@ public class DownloaderRunnableTest {
                 .setSegmentIndex(0)
                 .setRequestRange(1)
                 .setMaxRetry(maxRetry)
-                .setEndPosition(5*(int)(FileUtils.ONE_KB))
+                .setEndPosition(5*(int)(FileUtils.ONE_KB)-1)
                 .createSegment();
 
         //my protocol send block of chunkSize
@@ -396,7 +400,7 @@ public class DownloaderRunnableTest {
 
         ThreadPoolExecutor service = (ThreadPoolExecutor) Executors.newFixedThreadPool(1);
         Future future = service.submit(runnable);
-        TimeUnit.SECONDS.sleep(4);
+        TimeUnit.SECONDS.sleep(2);
 
         int numberOfGoodMessagesBeforeError = ((length%maxRetry)>0?1:0)+ (length - (length % maxRetry))/maxRetry;
         for (int i = 0; i < numberOfGoodMessagesBeforeError; i++) {
