@@ -56,12 +56,7 @@ public class TestUtils {
 
             @Override
             public void download(String url, ChunkConsumer consumer) throws DownloadException {
-                try {
                     consumer.consume(supplier.get());
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                    throw new DownloadException("",e);
-                }
             }
 
 

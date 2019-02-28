@@ -59,7 +59,7 @@ public class HttpProtocolHandler implements ProtocolHandler {
                     consumer.consume(null);
                 }
             }
-        } catch (IOException | InterruptedException e) {
+        } catch (IOException  e) {
             throw new DownloadException("Exception when downloading " + url, e);
         }
     }
@@ -79,12 +79,12 @@ public class HttpProtocolHandler implements ProtocolHandler {
                     consumer.consume(null);
                 }
             }
-        } catch (IOException | InterruptedException e) {
+        } catch (IOException  e) {
             throw new DownloadException("Exception when downloading " + url, e);
         }
     }
 
-    private void stream(HttpEntity provider, int chunkSize, ChunkConsumer consumer) throws InterruptedException, IOException {
+    private void stream(HttpEntity provider, int chunkSize, ChunkConsumer consumer) throws DownloadException, IOException {
         byte[] result = new byte[chunkSize];
         try (InputStream stream = provider.getContent()) {
             boolean shouldConsume = true;

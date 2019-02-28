@@ -62,11 +62,7 @@ public class ControllerTest {
 
             @Override
             public void download(String url, ChunkConsumer consumer) throws DownloadException {
-                try {
                     consumer.consume( phrase.getBytes(StandardCharsets.UTF_8));
-                } catch (InterruptedException e) {
-                    throw new DownloadException("",e);
-                }
 
             }
 
@@ -243,13 +239,9 @@ public class ControllerTest {
             public void download(String url, ChunkConsumer consumer) throws DownloadException {
                 if(count<10){
                     count++;
-                    try {
                         consumer.consume( phrase.getBytes(StandardCharsets.UTF_8));
                         consumer.consume(new byte[0]);
 
-                    } catch (InterruptedException e) {
-                        throw new DownloadException("",e);
-                    }
                 }
             }
 
@@ -319,11 +311,7 @@ public class ControllerTest {
             @Override
             public void download(String url,ChunkConsumer consumer) throws DownloadException {
 
-                try {
                     consumer.consume( phrase.getBytes(StandardCharsets.UTF_8));
-                } catch (InterruptedException e) {
-                    throw new DownloadException("",e);
-                }
             }
 
             @Override
@@ -409,7 +397,6 @@ public class ControllerTest {
 
                     TimeUnit.SECONDS.sleep(1);
 
-                    consumer.consume(phrase.getBytes(StandardCharsets.UTF_8));
                 } catch (InterruptedException e) {
                     throw new DownloadException("",e);
                 }
@@ -417,7 +404,7 @@ public class ControllerTest {
 
             @Override
             public void download(String url, ChunkConsumer consumer) throws DownloadException {
-                download(url,consumer);
+
 
             }
 
@@ -429,7 +416,7 @@ public class ControllerTest {
         Configuration configuration = new Configuration() {
             @Override
             public DownloaderConfiguration getDownloaderConfiguration() {
-                return TestUtils.get(FileUtils.ONE_MB,FileUtils.ONE_MB*2,10,3, (int) size);
+                return TestUtils.get(FileUtils.ONE_MB,FileUtils.ONE_MB*2,2,3, (int) size);
             }
 
             @Override

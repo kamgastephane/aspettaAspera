@@ -28,7 +28,7 @@ public class DownloaderRunnable implements Runnable {
     }
     private ChunkConsumer consumer = new ChunkConsumer() {
         @Override
-        public boolean consume(byte[]bytes) throws InterruptedException {
+        public boolean consume(byte[]bytes) throws DownloadException {
             if(bytes == null)
             {
                 block.update(0);
@@ -56,7 +56,12 @@ public class DownloaderRunnable implements Runnable {
 
                     ResultMessage resultMessage = new ResultMessage(block.getSegmentIndex(),
                             block.getStatus(), bytes);
-                    queue.put(resultMessage);
+                    try {
+                        queue.put(resultMessage);
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                        throw new DownloadException("InterruptedException while consuming package",e);
+                    }
                     return true;
 
                 }
@@ -74,8 +79,6 @@ public class DownloaderRunnable implements Runnable {
         if(block.getRequestRange()>0)
         {
             useRangeRequest = true;
-        }else {
-            useRangeRequest = false;
         }
         block.setStatus(DownloadStatus.DOWNLOADING);
 
@@ -99,12 +102,23 @@ public class DownloaderRunnable implements Runnable {
             } catch (DownloadException e) {
                 logger.error(e.getMessage(), e.getCause());
                 block.setLastError(e);
-                if(e.getCause() instanceof InterruptedException)
+                Throwable ancestor = e;
+                boolean foundInterruptedException = false;
+                while ( ancestor.getCause() != null && e.getCause() != e)
                 {
-                    logger.error("Interrupted exception while pushing message to manager with status " + block.getStatus().toString(), e);
-                    break;
 
+                    ancestor = ancestor.getCause();
+                    if(ancestor instanceof InterruptedException)
+                    {
+                        logger.error("Interrupted exception while pushing message to manager with status " + block.getStatus().toString(), e);
+                        foundInterruptedException = true;
+                        break;
+                    }
                 }
+                if (foundInterruptedException){
+                    break;
+                }
+
                 if (!block.canRetry()) {
                     block.setStatus(DownloadStatus.ERROR);
                     break;

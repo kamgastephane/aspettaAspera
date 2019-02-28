@@ -53,8 +53,8 @@ public class DownloaderRunnableTest {
                     random.nextBytes(buffer);
                     consumer.consume(buffer);
                 } catch (InterruptedException e) {
-                    logger.error("i triggered an exection after 1 seconds",e);
-                    throw new DownloadException("",e);
+                    logger.error("i triggered an exception after 1 seconds",e);
+                    throw new DownloadException("",new RuntimeException("",new RuntimeException("",e)));
                 }
 
             }
@@ -110,7 +110,7 @@ public class DownloaderRunnableTest {
             @Override
             public void download(String url, ChunkConsumer consumer) throws DownloadException {
                 //we return data the two first time and then we start returning 0 bytes
-                try {count++;
+                    count++;
                 if (count >= 3 && count < 8) {
 
                         consumer.consume(null);
@@ -119,10 +119,6 @@ public class DownloaderRunnableTest {
                     byte[] buffer = new byte[1];
                     random.nextBytes(buffer);
                     consumer.consume(buffer);
-                } } catch (InterruptedException e) {
-                    e.printStackTrace();
-                    throw new DownloadException("",e);
-
                 }
             }
 
@@ -182,7 +178,6 @@ public class DownloaderRunnableTest {
             @Override
             public void download(String url, ChunkConsumer consumer) throws DownloadException {
                 //we return data the two first time and then we start throwing exceptions
-                try {
                     count++;
                     if (count >= 3 && count < 8) {
                         throw new DownloadException("", new Exception());
@@ -191,12 +186,6 @@ public class DownloaderRunnableTest {
                         random.nextBytes(buffer);
                         consumer.consume(buffer);
                     }
-                }catch (InterruptedException e) {
-                    e.printStackTrace();
-                    throw new DownloadException("",e);
-
-
-                }
 
             }
 
@@ -254,16 +243,10 @@ public class DownloaderRunnableTest {
             @Override
             public void  download(String url,ChunkConsumer consumer) throws DownloadException {
                 //we return data from our phrase
-               try {
                    char c = phrase.charAt(count);
                    byte[] buffer = Character.toString(c).getBytes();
                    count++;
                    consumer.consume( buffer);
-               }catch (InterruptedException e)
-               {
-                   e.printStackTrace();
-                   throw new DownloadException("",e);
-               }
             }
 
             @Override
@@ -327,7 +310,6 @@ public class DownloaderRunnableTest {
             @Override
             public void download(String url, long from,long to, ChunkConsumer consumer) throws DownloadException {
                 //we return data from our phrase
-                try {
                     byte[] buffer = new byte[chunkSize];
                     int copied = 0;
                     byte[] content = phrase.getBytes(StandardCharsets.UTF_8);
@@ -339,11 +321,7 @@ public class DownloaderRunnableTest {
                     System.arraycopy(content,0,buffer,copied,chunkSize-copied);
 
                     consumer.consume(buffer);
-                }catch (InterruptedException e)
-                {
-                    e.printStackTrace();
-                    throw new DownloadException("",e);
-                }
+
             }
 
             @Override
@@ -375,7 +353,7 @@ public class DownloaderRunnableTest {
 
     @Test
     public void testICanSendProperDataOneOutOf_MAXRETRY_TimeWithoutIssue() throws InterruptedException {
-        int maxRetry = 4;
+        int maxRetry = 2;
 
         Segment segment = new Segment.SegmentBuilder()
                 .setSegmentIndex(0)
@@ -402,7 +380,6 @@ public class DownloaderRunnableTest {
             @Override
             public void download(String url,ChunkConsumer consumer) throws DownloadException {
                 //we return data from our phrase
-                try {
                     if (count < length) {
                         byte[] buffer;
                         if (count % maxRetry == 0) {
@@ -413,14 +390,12 @@ public class DownloaderRunnableTest {
                         }
                         count++;
                         consumer.consume(buffer);
+                    }else {
+                        consumer.consume(null);
+
                     }
-                    //i send an extra bad data here for the eleven time and it should trigger an error as the max retry is 2
-                    consumer.consume(null);
-                }catch (InterruptedException e)
-                {
-                    e.printStackTrace();
-                    throw new DownloadException("",e);
-                }
+                    //i send an extra bad data here for the n plus 1 time and it should trigger an error as the max retry is 2
+
 
             }
 
