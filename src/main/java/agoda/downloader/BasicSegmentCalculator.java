@@ -31,6 +31,7 @@ public class BasicSegmentCalculator implements SegmentsCalculator {
                     .setEndPosition(information.getSize() - 1)
                     .setMaxRetry(configuration.getMaxRetry())
                     .setSrcUrl(information.getSrcUrl())
+                    .setRequestRange(0)
                     .createSegment();
             segments.add(unique);
 
@@ -66,6 +67,7 @@ public class BasicSegmentCalculator implements SegmentsCalculator {
                         .setEndPosition(end - 1)
                         .setMaxRetry(configuration.getMaxRetry())
                         .setSrcUrl(information.getSrcUrl())
+                        .setRequestRange(configuration.getChunkSize())
                         .createSegment();
                 segments.add(segment);
                 start += segmentSize;

@@ -3,6 +3,7 @@ package agoda.downloader;
 import agoda.configuration.Configuration;
 import agoda.configuration.DownloaderConfiguration;
 import agoda.configuration.StorageConfiguration;
+import agoda.protocols.ChunkConsumer;
 import agoda.protocols.ProtocolHandler;
 import agoda.storage.LazyStorage;
 import agoda.storage.Storage;
@@ -37,7 +38,7 @@ public class ControllerTest {
         Configuration configuration = new Configuration() {
             @Override
             public DownloaderConfiguration getDownloaderConfiguration() {
-                return TestUtils.get(FileUtils.ONE_KB,FileUtils.ONE_KB*16,10,3);
+                return TestUtils.get(FileUtils.ONE_KB,FileUtils.ONE_KB*16,10,3, (int) size);
             }
 
             @Override
@@ -54,15 +55,21 @@ public class ControllerTest {
             }
 
             @Override
-            public byte[] download(String url, long from, long to) throws DownloadException {
-                return download(url,from);
+            public void download(String url, long from, long to, ChunkConsumer consumer) throws DownloadException {
+                download(url,consumer);
 
             }
 
             @Override
-            public byte[] download(String url, long from) throws DownloadException {
-                return phrase.getBytes(StandardCharsets.UTF_8);
+            public void download(String url, ChunkConsumer consumer) throws DownloadException {
+                try {
+                    consumer.consume( phrase.getBytes(StandardCharsets.UTF_8));
+                } catch (InterruptedException e) {
+                    throw new DownloadException("",e);
+                }
+
             }
+
 
             @Override
             public DownloadInformation getInfo(String url) throws DownloadException {
@@ -123,13 +130,7 @@ public class ControllerTest {
             }
 
             @Override
-            public byte[] download(String url, long from, long to) throws DownloadException {
-                return download(url,from);
-
-            }
-
-            @Override
-            public byte[] download(String url, long from) throws DownloadException {
+            public void download(String url, long from, long to,ChunkConsumer consumer) throws DownloadException {
                 if (from == 0)
                 {
                     firstSegment = true;
@@ -142,10 +143,17 @@ public class ControllerTest {
                 count++;
                 try {
                     TimeUnit.SECONDS.sleep(1);
+                    consumer.consume(phrase.getBytes(StandardCharsets.UTF_8));
+
                 } catch (InterruptedException e) {
                     throw new DownloadException("",e);
                 }
-                return phrase.getBytes(StandardCharsets.UTF_8);
+
+            }
+
+            @Override
+            public void download(String url, ChunkConsumer consumer) throws DownloadException {
+                download(url,0,0,consumer);
             }
 
             @Override
@@ -156,7 +164,7 @@ public class ControllerTest {
         Configuration configuration = new Configuration() {
             @Override
             public DownloaderConfiguration getDownloaderConfiguration() {
-                return TestUtils.get(FileUtils.ONE_MB,FileUtils.ONE_MB*2,10,3);
+                return TestUtils.get(FileUtils.ONE_MB,FileUtils.ONE_MB*2,10,3,(int)size);
             }
 
             @Override
@@ -209,7 +217,7 @@ public class ControllerTest {
         Configuration configuration = new Configuration() {
             @Override
             public DownloaderConfiguration getDownloaderConfiguration() {
-                return TestUtils.get(FileUtils.ONE_KB,FileUtils.ONE_KB*16,10,3);
+                return TestUtils.get(FileUtils.ONE_KB,FileUtils.ONE_KB*16,10,3,(int)size);
             }
 
             @Override
@@ -226,18 +234,23 @@ public class ControllerTest {
             }
 
             @Override
-            public byte[] download(String url, long from, long to) throws DownloadException {
-                return download(url,from);
+            public void download(String url, long from, long to,ChunkConsumer consumer) throws DownloadException {
+                download(url,consumer);
 
             }
 
             @Override
-            public byte[] download(String url, long from) throws DownloadException {
+            public void download(String url, ChunkConsumer consumer) throws DownloadException {
                 if(count<10){
                     count++;
-                    return phrase.getBytes(StandardCharsets.UTF_8);
+                    try {
+                        consumer.consume( phrase.getBytes(StandardCharsets.UTF_8));
+                        consumer.consume(new byte[0]);
+
+                    } catch (InterruptedException e) {
+                        throw new DownloadException("",e);
+                    }
                 }
-                return null;
             }
 
             @Override
@@ -298,15 +311,19 @@ public class ControllerTest {
             }
 
             @Override
-            public byte[] download(String url, long from, long to) throws DownloadException {
-                return download(url,from);
+            public void download(String url, long from, long to,ChunkConsumer consumer) throws DownloadException {
+                download(url,consumer);
 
             }
 
             @Override
-            public byte[] download(String url, long from) throws DownloadException {
+            public void download(String url,ChunkConsumer consumer) throws DownloadException {
 
-                return phrase.getBytes(StandardCharsets.UTF_8);
+                try {
+                    consumer.consume( phrase.getBytes(StandardCharsets.UTF_8));
+                } catch (InterruptedException e) {
+                    throw new DownloadException("",e);
+                }
             }
 
             @Override
@@ -317,7 +334,7 @@ public class ControllerTest {
         Configuration configuration = new Configuration() {
             @Override
             public DownloaderConfiguration getDownloaderConfiguration() {
-                return TestUtils.get(FileUtils.ONE_MB,FileUtils.ONE_MB*2,2,3);
+                return TestUtils.get(FileUtils.ONE_MB,FileUtils.ONE_MB*2,2,3,(int)size);
             }
 
             @Override
@@ -353,7 +370,7 @@ public class ControllerTest {
                 assert !f.exists();
             }
         }
-        assert controller.getTotalSaved() == size;
+        assert controller.getSegmentSizeSaved() == size;
         FileUtils.deleteQuietly(directory);
 
     }
@@ -377,29 +394,31 @@ public class ControllerTest {
             }
 
             @Override
-            public byte[] download(String url, long from, long to) throws DownloadException {
-                return download(url,from);
-
-            }
-
-            @Override
-            public byte[] download(String url, long from) throws DownloadException {
-                if (from == 0)
-                {
-                    firstSegment = true;
-                }
-                //after the third request i throw an exception only on one of the two threads running
-                if(count > 3 && firstSegment)
-                {
-                    return new byte[0];
-                }
-                count++;
+            public void download(String url, long from, long to,ChunkConsumer consumer) throws DownloadException {
                 try {
+                    if (from == 0)
+                    {
+                        firstSegment = true;
+                    }
+                    //after the third request i throw an exception only on one of the two threads running
+                    if(count > 3 && firstSegment)
+                    {
+                        consumer.consume(null);
+                    }
+                    count++;
+
                     TimeUnit.SECONDS.sleep(1);
+
+                    consumer.consume(phrase.getBytes(StandardCharsets.UTF_8));
                 } catch (InterruptedException e) {
                     throw new DownloadException("",e);
                 }
-                return phrase.getBytes(StandardCharsets.UTF_8);
+            }
+
+            @Override
+            public void download(String url, ChunkConsumer consumer) throws DownloadException {
+                download(url,consumer);
+
             }
 
             @Override
@@ -410,7 +429,7 @@ public class ControllerTest {
         Configuration configuration = new Configuration() {
             @Override
             public DownloaderConfiguration getDownloaderConfiguration() {
-                return TestUtils.get(FileUtils.ONE_MB,FileUtils.ONE_MB*2,10,3);
+                return TestUtils.get(FileUtils.ONE_MB,FileUtils.ONE_MB*2,10,3, (int) size);
             }
 
             @Override

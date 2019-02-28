@@ -29,7 +29,7 @@ public class Controller {
     private SegmentsCalculator segmentsCalculator;
     private DownloadInformation downloadInformation;
     private LinkedBlockingQueue<ResultMessage> queue;
-    private long totalSaved = 0;
+    private long segmentSizeSaved = 0;
 
     public Controller(String url,Configuration configuration, int maxConcurrentDownload,SegmentsCalculator segmentsCalculator,ProtocolHandler handler) {
         this.maxConcurrentDownload = maxConcurrentDownload;
@@ -201,7 +201,7 @@ public class Controller {
                     if(resultMessage.getContent()!=null && resultMessage.getContent().length>0){
                         Storage storage = controllerStatus.getStorage(message.getSegmentId()).get();
                         storage.push(resultMessage.getContent());
-                        totalSaved+=resultMessage.getContent().length;
+                        segmentSizeSaved +=resultMessage.getContent().length;
                     }
             }
             if (DownloadStatus.FINISHED == resultMessage.getStatus()) {
@@ -216,7 +216,7 @@ public class Controller {
                 if (controllerStatus.areAllDownloadsRelatedToFinished(segment.getSrcUrl())) {
                     try {
                         joinSegments(segment.getSrcUrl());
-                        logger.info("{} fully downloaded at with {} kbs", segment.getSrcUrl(),totalSaved/1024);
+                        logger.info("{} fully downloaded at with {} kbs", segment.getSrcUrl(), segmentSizeSaved /1024);
 
                     } catch (IOException e) {
                         logger.error("error while joining the storage stream for " + segment.getSrcUrl(), e);
@@ -231,8 +231,8 @@ public class Controller {
 
     }
 
-    public long getTotalSaved() {
-        return totalSaved;
+    public long getSegmentSizeSaved() {
+        return segmentSizeSaved;
     }
 
     /**

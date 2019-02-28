@@ -2,6 +2,7 @@ package agoda.downloader;
 
 
 import agoda.downloader.messaging.ResultMessage;
+import agoda.protocols.ChunkConsumer;
 import agoda.protocols.ProtocolHandler;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -19,64 +20,81 @@ public class DownloaderRunnable implements Runnable {
     DownloaderRunnable(Segment segment, ProtocolHandler protocolHandler, LinkedBlockingQueue<ResultMessage> resultMessageBlockingQueue) {
 
 
-            this.handler = protocolHandler;
-            block = new DownloadBlock(segment);
-            queue = resultMessageBlockingQueue;
+        this.handler = protocolHandler;
+        block = new DownloadBlock(segment);
+        queue = resultMessageBlockingQueue;
 
 
     }
-
-    @Override
-    public void run() {
-
-        //we use thread local as a hack to provide synchronization
-        //we can guarantee that the copy hold by the controller is not affecting this one
-
-        block.setStatus(DownloadStatus.DOWNLOADING);
-
-        while (!Thread.currentThread().isInterrupted() && block.getStatus() == DownloadStatus.DOWNLOADING) {
-            long start = block.getStartPosition();
-
-
-            try {
-                long watchStart = System.currentTimeMillis();
-                byte[] data = handler.download(block.getSrcUrl(), start);
-                long watchEnd = System.currentTimeMillis();
-
-                if(data == null)
+    private ChunkConsumer consumer = new ChunkConsumer() {
+        @Override
+        public boolean consume(byte[]bytes) throws InterruptedException {
+            if(bytes == null)
+            {
+                block.update(0);
+                return false;
+            }else{
+                long byteRead = bytes.length;
+                if(byteRead == 0)
                 {
-                    //null signals a requested end of the transmission by the protocol
+                    //empty array signals a requested end of the transmission by the protocol
                     block.setStatus(DownloadStatus.FINISHED);
-                    break;
-                }
-                else{
-                    long byteRead = data.length;
-
-
+                    return false;
+                }else {
                     //we truncate the data received if we are out of bound => we are bigger than the size of the segment
                     boolean outOfBounds = block.isRangeOutOfBounds(byteRead);
                     if(outOfBounds)
                     {
-                        int byteRequired = (int)(block.getEndPosition()-start)+1;
+                        int byteRequired = (int)(block.getEndPosition()-block.getStartPosition())+1;
 
                         byte[]copy = new byte[byteRequired];
-                        System.arraycopy(data,0,copy,0,byteRequired);
+                        System.arraycopy(bytes,0,copy,0,byteRequired);
                         byteRead = byteRequired;
-                        data = copy;
+                        bytes = copy;
                     }
-                    block.update(byteRead, watchEnd - watchStart);
+                    block.update(byteRead);
 
-                    if (byteRead > 0) {
-                        ResultMessage resultMessage = new ResultMessage(block.getSegmentIndex(),
-                                block.getStatus(), data);
-                        queue.put(resultMessage);
+                    ResultMessage resultMessage = new ResultMessage(block.getSegmentIndex(),
+                            block.getStatus(), bytes);
+                    queue.put(resultMessage);
+                    return true;
 
-                    }
                 }
+            }
+        };
+    };
 
 
+    @Override
+    public void run() {
+
+        // i should define which download method should be used
+        // if the chunk size is 0 we use the direct download otherwise we use the Range based download
+        boolean useRangeRequest = false;
+        if(block.getRequestRange()>0)
+        {
+            useRangeRequest = true;
+        }else {
+            useRangeRequest = false;
+        }
+        block.setStatus(DownloadStatus.DOWNLOADING);
+
+        while (!Thread.currentThread().isInterrupted() && block.getStatus() == DownloadStatus.DOWNLOADING) {
+            long start = block.getStartPosition();
+            long end = start + block.getRequestRange() -1;
+
+            try {
+                long watchStart = System.currentTimeMillis();
 
 
+                if(useRangeRequest)
+                {
+                    handler.download(block.getSrcUrl(),start,end, consumer);
+                }else {
+                    handler.download(block.getSrcUrl(), consumer);
+                }
+                long watchEnd = System.currentTimeMillis();
+                block.updateRate(watchEnd - watchStart);
 
             } catch (DownloadException e) {
                 logger.error(e.getMessage(), e.getCause());
@@ -91,9 +109,6 @@ public class DownloaderRunnable implements Runnable {
                     block.setStatus(DownloadStatus.ERROR);
                     break;
                 }
-            } catch (InterruptedException e) {
-                logger.error("Interrupted exception while pushing message to manager with status " + block.getStatus().toString(), e);
-                break;
             }
 
         }

@@ -21,10 +21,10 @@ public class Segment implements Comparable<Segment> {
     protected long startPosition;
     protected int currentTry = 1;
     protected int maxRetry;
-    protected long requestRange;
+    protected int requestRange;
 
 
-    protected Segment(int segmentIndex, String srcUrl, long initialStartPosition, long endPosition, int maxRetry, long requestRange) {
+    protected Segment(int segmentIndex, String srcUrl, long initialStartPosition, long endPosition, int maxRetry, int requestRange) {
         this.segmentIndex = segmentIndex;
         this.srcUrl = srcUrl;
         this.initialStartPosition = initialStartPosition;
@@ -67,6 +67,10 @@ public class Segment implements Comparable<Segment> {
         return startPosition;
     }
 
+    public long getRequestRange() {
+        return requestRange;
+    }
+
     long getInitialStartPosition() {
         return initialStartPosition;
     }
@@ -95,7 +99,7 @@ public class Segment implements Comparable<Segment> {
         private long initialStartPosition = 0;
         private long endPosition = 0;
         private int maxRetry;
-        private long requestRange = 2 * FileUtils.ONE_MB;
+        private int requestRange;
 
         SegmentBuilder setSegmentIndex(int segmentIndex) {
             this.segmentIndex = segmentIndex;
@@ -122,7 +126,7 @@ public class Segment implements Comparable<Segment> {
             return this;
         }
 
-        SegmentBuilder setRequestRange(long requestRange) {
+        SegmentBuilder setRequestRange(int requestRange) {
             this.requestRange = requestRange;
             return this;
         }

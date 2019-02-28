@@ -3,6 +3,7 @@ package agoda.downloader;
 import agoda.configuration.DownloaderConfiguration;
 import agoda.configuration.StorageConfiguration;
 import agoda.configuration.StorageConfigurationImpl;
+import agoda.protocols.ChunkConsumer;
 import agoda.protocols.ProtocolHandler;
 import agoda.storage.LazyStorage;
 import agoda.storage.Storage;
@@ -49,14 +50,22 @@ public class TestUtils {
             }
 
             @Override
-            public byte[] download(String url, long from, long to) throws DownloadException {
-                return download(url,from);
+            public void download(String url, long from, long to, ChunkConsumer consumer) throws DownloadException {
+
             }
 
             @Override
-            public byte[] download(String url, long from) throws DownloadException {
-                return supplier.get();
+            public void download(String url, ChunkConsumer consumer) throws DownloadException {
+                try {
+                    consumer.consume(supplier.get());
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                    throw new DownloadException("",e);
+                }
             }
+
+
+
 
             @Override
             public DownloadInformation getInfo(String url) throws DownloadException {
@@ -64,7 +73,7 @@ public class TestUtils {
             }
         };
     }
-    static DownloaderConfiguration get(long minSize,long maxSize,int maxConcurrency,int maxRetry)
+    static DownloaderConfiguration get(long minSize,long maxSize,int maxConcurrency,int maxRetry,int chunsize)
     {
         return new DownloaderConfiguration() {
             @Override
@@ -85,6 +94,11 @@ public class TestUtils {
             @Override
             public int getMaxRetry() {
                 return maxRetry;
+            }
+
+            @Override
+            public int getChunkSize() {
+                return chunsize;
             }
         };
     }

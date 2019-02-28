@@ -1,6 +1,7 @@
 package agoda.downloader;
 
 import agoda.downloader.messaging.ResultMessage;
+import agoda.protocols.ChunkConsumer;
 import agoda.protocols.ProtocolHandler;
 import org.apache.commons.io.FileUtils;
 import org.apache.logging.log4j.LogManager;
@@ -27,7 +28,6 @@ public class DownloaderRunnableTest {
 
     @After
     public void tearDown() throws Exception {
-        Random random = null;
 
     }
 
@@ -40,22 +40,25 @@ public class DownloaderRunnableTest {
             }
 
             @Override
-            public byte[] download(String url, long from, long to) throws DownloadException {
-                return download(url,from);
+            public void download(String url, long from, long to, ChunkConsumer consumer) throws DownloadException {
+                download(url,consumer);
+
             }
 
             @Override
-            public byte[] download(String url, long from) throws DownloadException {
+            public void download(String url, ChunkConsumer consumer) throws DownloadException {
                 try {
                     TimeUnit.SECONDS.sleep(1);
+                    byte[] buffer = new byte[1];
+                    random.nextBytes(buffer);
+                    consumer.consume(buffer);
                 } catch (InterruptedException e) {
                     logger.error("i triggered an exection after 1 seconds",e);
                     throw new DownloadException("",e);
                 }
-                byte[] buffer = new byte[1];
-                random.nextBytes(buffer);
-                return buffer;
+
             }
+
 
             @Override
             public DownloadInformation getInfo(String url) throws DownloadException {
@@ -82,7 +85,7 @@ public class DownloaderRunnableTest {
     }
 
     @Test
-    public void testItStopWhenNoBytesAreReceivedForMoreThanMaxRetrySize() throws InterruptedException {
+    public void testItStopWhenNullIsReceivedForMoreThanMaxRetrySize() throws InterruptedException {
         int maxRetry = 5;
         Segment segment = new Segment.SegmentBuilder()
                 .setSegmentIndex(0)
@@ -100,22 +103,30 @@ public class DownloaderRunnableTest {
             }
 
             @Override
-            public byte[] download(String url, long from, long to) throws DownloadException {
-                return download(url, from);
+            public void download(String url, long from, long to, ChunkConsumer consumer) throws DownloadException {
+                download(url,consumer);
             }
 
             @Override
-            public byte[] download(String url, long from) throws DownloadException {
+            public void download(String url, ChunkConsumer consumer) throws DownloadException {
                 //we return data the two first time and then we start returning 0 bytes
-                count++;
+                try {count++;
                 if (count >= 3 && count < 8) {
-                    return new byte[0];
+
+                        consumer.consume(null);
+
                 } else {
                     byte[] buffer = new byte[1];
                     random.nextBytes(buffer);
-                    return buffer;
+                    consumer.consume(buffer);
+                } } catch (InterruptedException e) {
+                    e.printStackTrace();
+                    throw new DownloadException("",e);
+
                 }
             }
+
+
 
             @Override
             public DownloadInformation getInfo(String url) throws DownloadException {
@@ -164,21 +175,29 @@ public class DownloaderRunnableTest {
             }
 
             @Override
-            public byte[] download(String url, long from, long to) throws DownloadException {
-                return download(url, from);
+            public void download(String url, long from, long to,ChunkConsumer consumer) throws DownloadException {
+                download(url, consumer);
             }
 
             @Override
-            public byte[] download(String url, long from) throws DownloadException {
+            public void download(String url, ChunkConsumer consumer) throws DownloadException {
                 //we return data the two first time and then we start throwing exceptions
-                count++;
-                if (count >= 3 && count < 8) {
-                    throw new DownloadException("", new Exception());
-                } else {
-                    byte[] buffer = new byte[1];
-                    random.nextBytes(buffer);
-                    return buffer;
+                try {
+                    count++;
+                    if (count >= 3 && count < 8) {
+                        throw new DownloadException("", new Exception());
+                    } else {
+                        byte[] buffer = new byte[1];
+                        random.nextBytes(buffer);
+                        consumer.consume(buffer);
+                    }
+                }catch (InterruptedException e) {
+                    e.printStackTrace();
+                    throw new DownloadException("",e);
+
+
                 }
+
             }
 
             @Override
@@ -228,19 +247,23 @@ public class DownloaderRunnableTest {
             }
 
             @Override
-            public byte[] download(String url, long from, long to) throws DownloadException {
-                return download(url, from);
+            public void download(String url, long from, long to,ChunkConsumer consumer) throws DownloadException {
+                download(url, consumer);
             }
 
             @Override
-            public byte[] download(String url, long from) throws DownloadException {
+            public void  download(String url,ChunkConsumer consumer) throws DownloadException {
                 //we return data from our phrase
-                char c = phrase.charAt(count);
-                byte[] buffer = Character.toString(c).getBytes();
-                count++;
-                return buffer;
-
-
+               try {
+                   char c = phrase.charAt(count);
+                   byte[] buffer = Character.toString(c).getBytes();
+                   count++;
+                   consumer.consume( buffer);
+               }catch (InterruptedException e)
+               {
+                   e.printStackTrace();
+                   throw new DownloadException("",e);
+               }
             }
 
             @Override
@@ -297,13 +320,14 @@ public class DownloaderRunnableTest {
             }
 
             @Override
-            public byte[] download(String url, long from, long to) throws DownloadException {
-                return download(url, from);
+            public void download(String url, ChunkConsumer consumer) throws DownloadException {
+                download(url, consumer);
             }
 
             @Override
-            public byte[] download(String url, long from) throws DownloadException {
+            public void download(String url, long from,long to, ChunkConsumer consumer) throws DownloadException {
                 //we return data from our phrase
+                try {
                     byte[] buffer = new byte[chunkSize];
                     int copied = 0;
                     byte[] content = phrase.getBytes(StandardCharsets.UTF_8);
@@ -314,9 +338,12 @@ public class DownloaderRunnableTest {
                     }
                     System.arraycopy(content,0,buffer,copied,chunkSize-copied);
 
-                    return buffer;
-
-
+                    consumer.consume(buffer);
+                }catch (InterruptedException e)
+                {
+                    e.printStackTrace();
+                    throw new DownloadException("",e);
+                }
             }
 
             @Override
@@ -368,26 +395,33 @@ public class DownloaderRunnableTest {
             }
 
             @Override
-            public byte[] download(String url, long from, long to) throws DownloadException {
-                return download(url, from);
+            public void download(String url, long from, long to,ChunkConsumer consumer) throws DownloadException {
+                download(url, consumer);
             }
 
             @Override
-            public byte[] download(String url, long from) throws DownloadException {
+            public void download(String url,ChunkConsumer consumer) throws DownloadException {
                 //we return data from our phrase
-                if (count < length) {
-                    byte[] buffer;
-                    if (count % maxRetry == 0) {
-                        buffer = new byte[1];
-                        random.nextBytes(buffer);
-                    } else {
-                        buffer = new byte[0];
+                try {
+                    if (count < length) {
+                        byte[] buffer;
+                        if (count % maxRetry == 0) {
+                            buffer = new byte[1];
+                            random.nextBytes(buffer);
+                        } else {
+                            buffer = null;
+                        }
+                        count++;
+                        consumer.consume(buffer);
                     }
-                    count++;
-                    return buffer;
+                    //i send an extra bad data here for the eleven time and it should trigger an error as the max retry is 2
+                    consumer.consume(null);
+                }catch (InterruptedException e)
+                {
+                    e.printStackTrace();
+                    throw new DownloadException("",e);
                 }
-                //i send an extra bad data here for the eleven time and it should trigger an error as the max retry is 2
-                return new byte[0];
+
             }
 
             @Override

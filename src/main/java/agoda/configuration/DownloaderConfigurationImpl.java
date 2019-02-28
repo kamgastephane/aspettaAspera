@@ -11,6 +11,9 @@ public class DownloaderConfigurationImpl implements DownloaderConfiguration {
 
     private int maxRetry = 3;
 
+    private int chunkSize = 1024 * 1024;  //1Mb
+
+
     @Override
     public long getSegmentMinSize() {
         return segmentMinSize;
@@ -41,5 +44,10 @@ public class DownloaderConfigurationImpl implements DownloaderConfiguration {
     @Override
     public int getMaxRetry() {
         return maxRetry;
+    }
+
+    @Override
+    public int getChunkSize() {
+        return chunkSize;
     }
 }

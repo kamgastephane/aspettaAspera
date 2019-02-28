@@ -3,15 +3,16 @@ package agoda.downloader;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import java.time.LocalDateTime;
 import java.util.Date;
 
 public class DownloadBlock extends Segment {
 
     private static final Logger logger = LogManager.getLogger();
-    private Date lastReception;
+    private LocalDateTime lastReception;
     private DownloadException lastError;
     private double rate;// rate in kbit/s
-
+    private long lastRangeRead = 0;
     DownloadBlock(Segment segment) {
         super(segment.segmentIndex,segment.srcUrl, segment.initialStartPosition, segment.endPosition, segment.maxRetry, segment.requestRange);
         this.startPosition = initialStartPosition;
@@ -21,10 +22,19 @@ public class DownloadBlock extends Segment {
     {
         return (startPosition+range>endPosition && endPosition>0);
     }
+    void updateRate(long durationInMs)
+    {
+        double sizeInKbit = (lastRangeRead * 8) / 1000D;
+        double durationInSec = durationInMs * 1000D;
+        rate = sizeInKbit / durationInSec;
+        logger.info("Received {} kbit from server for url {} on segment {}, currentStatus:{} ", sizeInKbit, srcUrl, segmentIndex, status.toString());
+        //TODO here i should add heuristics to handle low or fast connections at runtime
 
-    void update(long range, long durationInMs) {
+    }
+    void update(long range) {
+        lastRangeRead = range;
         if (range == 0) {
-            //i did not receive any data something may be wron so i consider it as an error
+            //i did not receive any data something may be wrong so i consider it as an error
             logger.warn("Received empty response from server for url {} on segment {}", srcUrl, segmentIndex);
 
             boolean canRetry = canRetry();
@@ -37,22 +47,17 @@ public class DownloadBlock extends Segment {
 
             //as we are always resetting the counter, a server could abuse us and send data 1 out of three time :D
             currentTry = 1;
+            this.lastReception = LocalDateTime.now();
             this.startPosition += range;
-            this.lastReception = new Date();
             //if the end position is <=0 we have a download with unknow size
             if (startPosition > endPosition && endPosition>0) {
                 this.status = DownloadStatus.FINISHED;
             }
-            double sizeInKbit = (range * 8) / 1000D;
-            double durationInSec = durationInMs / 1000D;
-            rate = sizeInKbit / durationInSec;
-            logger.info("Received {} kbit from server for url {} on segment {}, currentStatus:{} ", sizeInKbit, srcUrl, segmentIndex, status.toString());
 
         }
 
-        //TODO here i should add heuristics to handle low or fast connections by tweaking
     }
-    public void setLastReception(Date lastReception) {
+    public void setLastReception(LocalDateTime lastReception) {
         this.lastReception = lastReception;
     }
 

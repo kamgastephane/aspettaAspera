@@ -14,7 +14,7 @@ public class BasicSegmentCalculatorTest {
         BasicSegmentCalculator segmentCalculator = BasicSegmentCalculator.getInstance();
 
         DownloadInformation fileWithoutRangeHeader = get(false,2 * 1024 * 1024);
-        DownloaderConfiguration configuration = get(2 * 1024 * 1024,2 * 1024 * 1024,100);
+        DownloaderConfiguration configuration = get(2 * 1024 * 1024,2 * 1024 * 1024,100,1024 * 1024);
         List<Segment> segments = segmentCalculator.getSegments(configuration.getMaxConcurrency(), configuration, fileWithoutRangeHeader);
 
         assert (segments.size() ==1);
@@ -43,7 +43,7 @@ public class BasicSegmentCalculatorTest {
         BasicSegmentCalculator segmentCalculator =  BasicSegmentCalculator.getInstance();
         long size = 100 * 1024 * 1024;
         DownloadInformation file = get(true,size);
-        DownloaderConfiguration configuration = get(2 * 1024 * 1024,500 * 1024 * 1024,100);
+        DownloaderConfiguration configuration = get(2 * 1024 * 1024,500 * 1024 * 1024,100,1024 * 1024);
         List<Segment> segments = segmentCalculator.getSegments(configuration.getMaxConcurrency(), configuration, file);
 
         assertEquals(50, segments.size());
@@ -64,7 +64,7 @@ public class BasicSegmentCalculatorTest {
         long size = 5 * 1024 * 1024 * 1024L + (1024 * 1024);
 
         DownloadInformation file = get(true,size); //5gb + 1mb
-        DownloaderConfiguration configuration = get(2 * 1024 * 1024,500 * 1024 * 1024,5); //max size at 500mb
+        DownloaderConfiguration configuration = get(2 * 1024 * 1024,500 * 1024 * 1024,5,1024*1024); //max size at 500mb
         List<Segment> segments = segmentCalculator.getSegments(configuration.getMaxConcurrency(), configuration, file);
 
         assertEquals(11, segments.size());
@@ -82,7 +82,7 @@ public class BasicSegmentCalculatorTest {
     {
         return new DownloadInformation("",acceptRange,size);
     }
-    public DownloaderConfiguration get(final long minSize, final long maxSize, final int maxConcurrency)
+    public DownloaderConfiguration get(final long minSize, final long maxSize, final int maxConcurrency,int chunkSize)
     {
         return new DownloaderConfiguration() {
             @Override
@@ -103,6 +103,11 @@ public class BasicSegmentCalculatorTest {
             @Override
             public int getMaxRetry() {
                 return 3;
+            }
+
+            @Override
+            public int getChunkSize() {
+                return 0;
             }
         };
     }
