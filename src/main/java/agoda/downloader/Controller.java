@@ -202,6 +202,9 @@ public class Controller {
                         Storage storage = controllerStatus.getStorage(message.getSegmentId()).get();
                         storage.push(resultMessage.getContent());
                         segmentSizeSaved +=resultMessage.getContent().length;
+
+                        //we update the downloadRate for this segment
+                        if(resultMessage.getRate()>0)segment.setRate(resultMessage.getRate());
                     }
             }
             if (DownloadStatus.FINISHED == resultMessage.getStatus()) {

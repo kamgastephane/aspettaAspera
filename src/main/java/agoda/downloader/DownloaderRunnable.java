@@ -2,7 +2,7 @@ package agoda.downloader;
 
 
 import agoda.downloader.messaging.ResultMessage;
-import agoda.protocols.ChunkConsumer;
+import agoda.protocols.ProgressListener;
 import agoda.protocols.ProtocolHandler;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -26,7 +26,7 @@ public class DownloaderRunnable implements Runnable {
 
 
     }
-    private ChunkConsumer consumer = new ChunkConsumer() {
+    private ProgressListener consumer = new ProgressListener() {
         @Override
         public boolean consume(byte[]bytes) throws DownloadException {
             if(bytes == null)
@@ -55,7 +55,7 @@ public class DownloaderRunnable implements Runnable {
                     block.update(byteRead);
 
                     ResultMessage resultMessage = new ResultMessage(block.getSegmentIndex(),
-                            block.getStatus(), bytes);
+                            block.getStatus(), bytes,block.getRate());
                     try {
                         queue.put(resultMessage);
                     } catch (InterruptedException e) {
@@ -90,6 +90,10 @@ public class DownloaderRunnable implements Runnable {
                 long watchStart = System.currentTimeMillis();
 
 
+
+                //TODO handle parameters as well
+                //TODO check the bytes red during this trip
+                //  IF not data was red increase the retrycount
                 if(useRangeRequest)
                 {
                     handler.download(block.getSrcUrl(),start,end, consumer);
@@ -129,7 +133,7 @@ public class DownloaderRunnable implements Runnable {
         //when i get here i am either interrupted, in an error state or finished state
 
         ResultMessage resultMessage = new ResultMessage(block.getSegmentIndex(),
-                block.getStatus());
+                block.getStatus(),block.getRate());
 
         try {
             queue.put(resultMessage);

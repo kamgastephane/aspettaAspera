@@ -2,12 +2,10 @@ package agoda.downloader;
 
 import agoda.configuration.DownloaderConfiguration;
 import agoda.configuration.StorageConfiguration;
-import agoda.configuration.StorageConfigurationImpl;
-import agoda.protocols.ChunkConsumer;
+import agoda.protocols.ProgressListener;
 import agoda.protocols.ProtocolHandler;
 import agoda.storage.LazyStorage;
 import agoda.storage.Storage;
-import agoda.storage.StorageFactory;
 
 import java.io.File;
 import java.io.IOException;
@@ -50,12 +48,12 @@ public class TestUtils {
             }
 
             @Override
-            public void download(String url, long from, long to, ChunkConsumer consumer) throws DownloadException {
+            public void download(String url, long from, long to, ProgressListener consumer) throws DownloadException {
 
             }
 
             @Override
-            public void download(String url, ChunkConsumer consumer) throws DownloadException {
+            public void download(String url, ProgressListener consumer) throws DownloadException {
                     consumer.consume(supplier.get());
             }
 

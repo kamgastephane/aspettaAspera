@@ -11,19 +11,23 @@ import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.DefaultHttpRequestRetryHandler;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.io.IOException;
 import java.io.InputStream;
 
 public class HttpProtocolHandler implements ProtocolHandler {
 
+    private static final Logger logger = LogManager.getLogger();
+
     private static final long MAX_CHUNK_SIZE = FileUtils.ONE_MB * 100;
     private static final int DEFAULT_CHUNK_SIZE = (int) (FileUtils.ONE_MB * 2);
-    private static final byte[] EOF = new byte[0];
     private static final int RETRY = 2;
 
     private DefaultHttpRequestRetryHandler retryhandler = new DefaultHttpRequestRetryHandler(RETRY, true);
-
+    //TODO keep the connection alive, verify the multithread issues
+    //TODO somebody must clease the client as well
     private final CloseableHttpClient httpclient = HttpClients.custom()
             .setRetryHandler(retryhandler).build();
 
@@ -37,7 +41,7 @@ public class HttpProtocolHandler implements ProtocolHandler {
     }
 
     @Override
-    public void download(String url, long from, long to, ChunkConsumer consumer) throws DownloadException {
+    public void download(String url, long from, long to, ProgressListener consumer) throws DownloadException {
         try {
             HttpGet request = new HttpGet(url);
             request.setHeader(HttpHeaders.RANGE, "bytes=" + (from) + "-" + (to));
@@ -53,9 +57,14 @@ public class HttpProtocolHandler implements ProtocolHandler {
                         //i trusted that the server sent me the correct content length
                         byte[] bytes = EntityUtils.toByteArray(entity);
                         consumer.consume(bytes);
+                    }else {
+                        logger.error("Expected a Partial content entity at {}, but none was supplied Returning error to the DownloadRunnable", url);
+                        consumer.consume(null);
+
                     }
                 } else {
                     //supply a null to the consumer
+                    logger.error("Received a null entity at {}, Returning an error to the DownloadRunnable", url);
                     consumer.consume(null);
                 }
             }
@@ -65,7 +74,7 @@ public class HttpProtocolHandler implements ProtocolHandler {
     }
 
     @Override
-    public void download(String url, ChunkConsumer consumer) throws DownloadException {
+    public void download(String url, ProgressListener consumer) throws DownloadException {
         try {
             HttpGet request = new HttpGet(url);
             try (CloseableHttpResponse response = httpclient.execute(request)) {
@@ -76,6 +85,7 @@ public class HttpProtocolHandler implements ProtocolHandler {
                     consumer.consume(EOF);
 
                 } else {
+                    logger.error("Received a null entity at {}, Returning an error to the DownloadRunnable", url);
                     consumer.consume(null);
                 }
             }
@@ -84,7 +94,7 @@ public class HttpProtocolHandler implements ProtocolHandler {
         }
     }
 
-    private void stream(HttpEntity provider, int chunkSize, ChunkConsumer consumer) throws DownloadException, IOException {
+    private void stream(HttpEntity provider, int chunkSize, ProgressListener consumer) throws DownloadException, IOException {
         byte[] result = new byte[chunkSize];
         try (InputStream stream = provider.getContent()) {
             boolean shouldConsume = true;

@@ -4,33 +4,43 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.time.LocalDateTime;
-import java.util.Date;
+import java.util.ArrayList;
+import java.util.List;
 
 public class DownloadBlock extends Segment {
 
     private static final Logger logger = LogManager.getLogger();
     private LocalDateTime lastReception;
     private DownloadException lastError;
-    private double rate;// rate in kbit/s
     private long lastRangeRead = 0;
+    private List<Double> rates;
+
     DownloadBlock(Segment segment) {
         super(segment.segmentIndex,segment.srcUrl, segment.initialStartPosition, segment.endPosition, segment.maxRetry, segment.requestRange);
         this.startPosition = initialStartPosition;
+        this.rates = new ArrayList<>();
     }
 
     boolean isRangeOutOfBounds(long range)
     {
         return (startPosition+range>endPosition && endPosition>0);
     }
+
     void updateRate(long durationInMs)
     {
-        double sizeInKbit = (lastRangeRead * 8) / 1000D;
+        double sizeInKbit = (lastRangeRead * 8) / 1024D;
         double durationInSec = durationInMs * 1000D;
         rate = sizeInKbit / durationInSec;
+        rates.add(rate);
         logger.info("Received {} kbit from server for url {} on segment {}, currentStatus:{} ", sizeInKbit, srcUrl, segmentIndex, status.toString());
-        //TODO here i should add heuristics to handle low or fast connections at runtime
 
     }
+
+    public  double  getRate() {
+        double totalevent = rates.stream().mapToDouble(f -> f).sum();
+        return totalevent / rates.size();
+    }
+
     void update(long range) {
         lastRangeRead = range;
         if (range == 0) {
@@ -62,9 +72,6 @@ public class DownloadBlock extends Segment {
     }
 
 
-    public void setRate(double rate) {
-        this.rate = rate;
-    }
     public DownloadException getLastError() {
         return lastError;
     }

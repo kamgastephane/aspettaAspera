@@ -22,6 +22,7 @@ public class Segment implements Comparable<Segment> {
     protected int currentTry = 1;
     protected int maxRetry;
     protected int requestRange;
+    protected double rate;// rate in kbit/s
 
 
     protected Segment(int segmentIndex, String srcUrl, long initialStartPosition, long endPosition, int maxRetry, int requestRange) {
@@ -79,6 +80,9 @@ public class Segment implements Comparable<Segment> {
         return endPosition;
     }
 
+    public void setRate(double rate) {
+        this.rate = rate;
+    }
 
     String getSrcUrl() {
         return srcUrl;

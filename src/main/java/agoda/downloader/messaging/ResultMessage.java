@@ -9,28 +9,38 @@ public class ResultMessage implements DownloaderMessage {
 
     private DownloadStatus status;
 
-    private DownloadException downloadException;
+    private double rate;
 
     private byte[] content;
+
 
 
     public ResultMessage(int segmentId, DownloadStatus status) {
         this.segmentId = segmentId;
         this.status = status;
     }
-
-    public ResultMessage(int segmentId, DownloadStatus status, byte[] content) {
+    public ResultMessage(int segmentId, DownloadStatus status,double rate) {
+        this.segmentId = segmentId;
+        this.status = status;
+        this.rate = rate;
+    }
+    public ResultMessage(int segmentId, DownloadStatus status, byte[] content,double rate) {
         this.segmentId = segmentId;
         this.status = status;
         this.content = content;
+        this.rate = rate;
+    }
+
+    public double getRate() {
+        return rate;
     }
 
     public DownloadStatus getStatus() {
         return status;
     }
 
-    public void setDownloadException(DownloadException downloadException) {
-        this.downloadException = downloadException;
+    public void setRate(long rate) {
+        this.rate = rate;
     }
 
     public byte[] getContent() {

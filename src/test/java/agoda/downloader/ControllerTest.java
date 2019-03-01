@@ -3,7 +3,7 @@ package agoda.downloader;
 import agoda.configuration.Configuration;
 import agoda.configuration.DownloaderConfiguration;
 import agoda.configuration.StorageConfiguration;
-import agoda.protocols.ChunkConsumer;
+import agoda.protocols.ProgressListener;
 import agoda.protocols.ProtocolHandler;
 import agoda.storage.LazyStorage;
 import agoda.storage.Storage;
@@ -55,13 +55,13 @@ public class ControllerTest {
             }
 
             @Override
-            public void download(String url, long from, long to, ChunkConsumer consumer) throws DownloadException {
+            public void download(String url, long from, long to, ProgressListener consumer) throws DownloadException {
                 download(url,consumer);
 
             }
 
             @Override
-            public void download(String url, ChunkConsumer consumer) throws DownloadException {
+            public void download(String url, ProgressListener consumer) throws DownloadException {
                     consumer.consume( phrase.getBytes(StandardCharsets.UTF_8));
 
             }
@@ -126,7 +126,7 @@ public class ControllerTest {
             }
 
             @Override
-            public void download(String url, long from, long to,ChunkConsumer consumer) throws DownloadException {
+            public void download(String url, long from, long to, ProgressListener consumer) throws DownloadException {
                 if (from == 0)
                 {
                     firstSegment = true;
@@ -148,7 +148,7 @@ public class ControllerTest {
             }
 
             @Override
-            public void download(String url, ChunkConsumer consumer) throws DownloadException {
+            public void download(String url, ProgressListener consumer) throws DownloadException {
                 download(url,0,0,consumer);
             }
 
@@ -230,13 +230,13 @@ public class ControllerTest {
             }
 
             @Override
-            public void download(String url, long from, long to,ChunkConsumer consumer) throws DownloadException {
+            public void download(String url, long from, long to, ProgressListener consumer) throws DownloadException {
                 download(url,consumer);
 
             }
 
             @Override
-            public void download(String url, ChunkConsumer consumer) throws DownloadException {
+            public void download(String url, ProgressListener consumer) throws DownloadException {
                 if(count<10){
                     count++;
                         consumer.consume( phrase.getBytes(StandardCharsets.UTF_8));
@@ -303,13 +303,13 @@ public class ControllerTest {
             }
 
             @Override
-            public void download(String url, long from, long to,ChunkConsumer consumer) throws DownloadException {
+            public void download(String url, long from, long to, ProgressListener consumer) throws DownloadException {
                 download(url,consumer);
 
             }
 
             @Override
-            public void download(String url,ChunkConsumer consumer) throws DownloadException {
+            public void download(String url, ProgressListener consumer) throws DownloadException {
 
                     consumer.consume( phrase.getBytes(StandardCharsets.UTF_8));
             }
@@ -382,7 +382,7 @@ public class ControllerTest {
             }
 
             @Override
-            public void download(String url, long from, long to,ChunkConsumer consumer) throws DownloadException {
+            public void download(String url, long from, long to, ProgressListener consumer) throws DownloadException {
                 try {
                     if (from == 0)
                     {
@@ -403,7 +403,7 @@ public class ControllerTest {
             }
 
             @Override
-            public void download(String url, ChunkConsumer consumer) throws DownloadException {
+            public void download(String url, ProgressListener consumer) throws DownloadException {
 
 
             }

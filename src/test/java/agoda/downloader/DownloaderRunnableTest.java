@@ -1,7 +1,7 @@
 package agoda.downloader;
 
 import agoda.downloader.messaging.ResultMessage;
-import agoda.protocols.ChunkConsumer;
+import agoda.protocols.ProgressListener;
 import agoda.protocols.ProtocolHandler;
 import org.apache.commons.io.FileUtils;
 import org.apache.logging.log4j.LogManager;
@@ -40,13 +40,13 @@ public class DownloaderRunnableTest {
             }
 
             @Override
-            public void download(String url, long from, long to, ChunkConsumer consumer) throws DownloadException {
+            public void download(String url, long from, long to, ProgressListener consumer) throws DownloadException {
                 download(url,consumer);
 
             }
 
             @Override
-            public void download(String url, ChunkConsumer consumer) throws DownloadException {
+            public void download(String url, ProgressListener consumer) throws DownloadException {
                 try {
                     TimeUnit.SECONDS.sleep(1);
                     byte[] buffer = new byte[1];
@@ -103,12 +103,12 @@ public class DownloaderRunnableTest {
             }
 
             @Override
-            public void download(String url, long from, long to, ChunkConsumer consumer) throws DownloadException {
+            public void download(String url, long from, long to, ProgressListener consumer) throws DownloadException {
                 download(url,consumer);
             }
 
             @Override
-            public void download(String url, ChunkConsumer consumer) throws DownloadException {
+            public void download(String url, ProgressListener consumer) throws DownloadException {
                 //we return data the two first time and then we start returning 0 bytes
                     count++;
                 if (count >= 3 && count < 8) {
@@ -171,12 +171,12 @@ public class DownloaderRunnableTest {
             }
 
             @Override
-            public void download(String url, long from, long to,ChunkConsumer consumer) throws DownloadException {
+            public void download(String url, long from, long to, ProgressListener consumer) throws DownloadException {
                 download(url, consumer);
             }
 
             @Override
-            public void download(String url, ChunkConsumer consumer) throws DownloadException {
+            public void download(String url, ProgressListener consumer) throws DownloadException {
                 //we return data the two first time and then we start throwing exceptions
                     count++;
                     if (count >= 3 && count < 8) {
@@ -236,15 +236,21 @@ public class DownloaderRunnableTest {
             }
 
             @Override
-            public void download(String url, long from, long to,ChunkConsumer consumer) throws DownloadException {
+            public void download(String url, long from, long to, ProgressListener consumer) throws DownloadException {
                 download(url, consumer);
             }
 
             @Override
-            public void  download(String url,ChunkConsumer consumer) throws DownloadException {
+            public void  download(String url, ProgressListener consumer) throws DownloadException {
                 //we return data from our phrase
                    char c = phrase.charAt(count);
-                   byte[] buffer = Character.toString(c).getBytes();
+                try {
+                    //we sleep a little bit to have a decent rate value
+                    TimeUnit.MILLISECONDS.sleep(100);
+                } catch (InterruptedException e) {
+                    throw new DownloadException("",e);
+                }
+                byte[] buffer = Character.toString(c).getBytes();
                    count++;
                    consumer.consume( buffer);
             }
@@ -269,9 +275,12 @@ public class DownloaderRunnableTest {
             char c = phrase.charAt(i);
             byte[] buffer = Character.toString(c).getBytes();
             Assert.assertArrayEquals(buffer, message.getContent());
+            System.out.println(message.getRate());
         }
         ResultMessage message = queue.take();
         Assert.assertEquals(message.getStatus(), DownloadStatus.FINISHED);
+        assert message.getRate() > 0;
+
         char c = phrase.charAt(messageExpected-1);
         byte[] buffer = Character.toString(c).getBytes();
         Assert.assertArrayEquals(buffer, message.getContent());
@@ -280,6 +289,11 @@ public class DownloaderRunnableTest {
         assert service.getActiveCount() == 0;
 
 
+    }
+    @Test
+    public void testTheRateOfTheDownloadIsCalculatedPropertly()
+    {
+        //TODO
     }
     @Test
     public  void testThatEvenIfTheProtocollSendDataBiggerThanTheSegmentSize_IcanTruncateItCorrectly() throws InterruptedException {
@@ -303,12 +317,12 @@ public class DownloaderRunnableTest {
             }
 
             @Override
-            public void download(String url, ChunkConsumer consumer) throws DownloadException {
+            public void download(String url, ProgressListener consumer) throws DownloadException {
                 download(url, consumer);
             }
 
             @Override
-            public void download(String url, long from,long to, ChunkConsumer consumer) throws DownloadException {
+            public void download(String url, long from,long to, ProgressListener consumer) throws DownloadException {
                 //we return data from our phrase
                     byte[] buffer = new byte[chunkSize];
                     int copied = 0;
@@ -373,12 +387,12 @@ public class DownloaderRunnableTest {
             }
 
             @Override
-            public void download(String url, long from, long to,ChunkConsumer consumer) throws DownloadException {
+            public void download(String url, long from, long to, ProgressListener consumer) throws DownloadException {
                 download(url, consumer);
             }
 
             @Override
-            public void download(String url,ChunkConsumer consumer) throws DownloadException {
+            public void download(String url, ProgressListener consumer) throws DownloadException {
                 //we return data from our phrase
                     if (count < length) {
                         byte[] buffer;
