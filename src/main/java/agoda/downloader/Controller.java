@@ -4,8 +4,10 @@ import agoda.configuration.Configuration;
 import agoda.downloader.messaging.DownloaderMessage;
 import agoda.downloader.messaging.ResultMessage;
 import agoda.protocols.ProtocolHandler;
-import agoda.storage.LazyStorage;
 import agoda.storage.Storage;
+import agoda.storage.StorageFactory;
+import agoda.storage.StorageSupplier;
+import org.apache.commons.io.FileUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -24,37 +26,44 @@ public class Controller {
     ControllerStatus controllerStatus;
     private int maxConcurrentDownload;
     private String url;
-    private Configuration configuration;
+    private Configuration config;
     private ProtocolHandler protocolHandler;
     private SegmentsCalculator segmentsCalculator;
-    private DownloadInformation downloadInformation;
+    private ResourceInformation resourceInformation;
     private LinkedBlockingQueue<ResultMessage> queue;
-    private long segmentSizeSaved = 0;
+    private HashMap<String,String> resourceParameters;
+    private StorageFactory storageFactory;
+    private double segmentSizeSaved = 0;
 
-    public Controller(String url,Configuration configuration, int maxConcurrentDownload,SegmentsCalculator segmentsCalculator,ProtocolHandler handler) {
+    public Controller(String url,HashMap<String,String> resourceParams, Configuration ctrlConfig, int maxConcurrentDownload,
+                      SegmentsCalculator segmentsCalculator,ProtocolHandler handler,
+                      StorageFactory storageFactory
+                     ) {
         this.maxConcurrentDownload = maxConcurrentDownload;
         this.url = url;
-        this.configuration = configuration;
-
-
+        this.config = ctrlConfig;
+        this.resourceParameters = resourceParams;
         this.segmentsCalculator = segmentsCalculator;
         this.protocolHandler = handler;
+        this.storageFactory = storageFactory;
 
     }
 
-    Map<String, List<LazyStorage>> initStorage(List<Segment> segments) {
+    Map<String, List<StorageSupplier>> initStorage(List<Segment> segments) {
 
-        HashMap<String, List<LazyStorage>> storageMap = new HashMap<>();
+        HashMap<String, List<StorageSupplier>> storageMap = new HashMap<>();
         for (Segment segment : segments) {
+            StorageSupplier supplier = storageFactory.getStorage(segment.getSrcUrl(), config.getStorageConfiguration().getDownloadFolder(),
+                        config.getStorageConfiguration().getOutputStreamBufferSize());
 
-                LazyStorage supplier =  new LazyStorage(segment.getSrcUrl(), configuration.getStorageConfiguration().getDownloadFolder(),
-                        configuration.getStorageConfiguration().getOutputStreamBufferSize());
+//                LazyBufferedStorage supplier =  new LazyBufferedStorage(segment.getSrcUrl(), config.getStorageConfiguration().getDownloadFolder(),
+//                        config.getStorageConfiguration().getOutputStreamBufferSize());
 
                     if (storageMap.containsKey(segment.getSrcUrl()))
                     {
                         storageMap.get(segment.getSrcUrl()).add(supplier);
                     }else{
-                        List<LazyStorage> list = new ArrayList<>();
+                        List<StorageSupplier> list = new ArrayList<>();
                         list.add(supplier);
                         storageMap.put(segment.getSrcUrl(),list);
                     }
@@ -62,12 +71,13 @@ public class Controller {
         return storageMap;
     }
 
-    void setup() {
+    public void setup() {
         //fetch the info about the file
-        downloadInformation = getFileInformation(maxConcurrentDownload);
+        resourceInformation = getFileInformation(maxConcurrentDownload);
 
         //create the download segments
         List<Segment> segmentList = createSegments();
+        logger.info("{} segments allocated",segmentList.size());
 
 
         int effectiveConcurrency = Math.min(maxConcurrentDownload, segmentList.size());
@@ -77,10 +87,11 @@ public class Controller {
 
         //create the thread pool
         pool = Executors.newFixedThreadPool(effectiveConcurrency);
+        logger.info("{} threads allocated",effectiveConcurrency);
 
 
         //create the storage
-        Map<String, List<LazyStorage>> storages = initStorage(segmentList);
+        Map<String, List<StorageSupplier>> storages = initStorage(segmentList);
 
 
         //create the controller status
@@ -90,7 +101,7 @@ public class Controller {
 
         segmentByUrl.forEach((url, segments) ->
         {
-            List<LazyStorage> storageForUrl = storages.get(url);
+            List<StorageSupplier> storageForUrl = storages.get(url);
             if (segments.size() != storageForUrl.size()) {
                 //this should never happened
                 logger.fatal("This is quite unusual, i have storage not corresponding to the segments to download! Download of the url {} will be cancelled", url);
@@ -122,10 +133,11 @@ public class Controller {
                     Storage storage = controllerStatus.getStorage(segment.getSegmentIndex()).get();
                     if (storage == null) {
                         //i failed to create storage for this specific url to download: abort
-                        logger.info("Failed to create some storage; {} Download of the url {} will be cancelled", url);
+                        logger.warn("Failed to create some storage; {} Download of the url {} will be cancelled", url);
                         failedUrl.add(segment.getSrcUrl());
                     } else{
                         DownloaderRunnable runnable = new DownloaderRunnable(segment, protocolHandler, queue);
+                        logger.info("Starts donwload of the segment at index {}",segment.getSegmentIndex());
                         Future future = pool.submit(runnable);
                         controllerStatus.addFutureRelatedTo(segment.getSegmentIndex(), future);
                     }
@@ -172,7 +184,7 @@ public class Controller {
             if(task!=null && !task.isCancelled())task.cancel(true);
 
             //clean all storage
-            LazyStorage storage = controllerStatus.getStorage(segment.getSegmentIndex());
+            StorageSupplier storage = controllerStatus.getStorage(segment.getSegmentIndex());
             if(storage.isInit())
             {
                 storage.get().reset();
@@ -204,13 +216,17 @@ public class Controller {
                         segmentSizeSaved +=resultMessage.getContent().length;
 
                         //we update the downloadRate for this segment
-                        if(resultMessage.getRate()>0)segment.setRate(resultMessage.getRate());
+                        segment.setRate(resultMessage.getRate());
                     }
             }
             if (DownloadStatus.FINISHED == resultMessage.getStatus()) {
                 try {
                     controllerStatus.getStorage(segment.getSegmentIndex()).get().close();
                     segment.setStatus(DownloadStatus.FINISHED);
+                    String approxSize = String.format("%.2f", segmentSizeSaved / FileUtils.ONE_MB);
+
+                    logger.info("Segment {} fully downloaded; total size downloaded: {} MB", segment.getSegmentIndex(),approxSize);
+
 
                 } catch (IOException e) {
                     logger.error("error while closing the storage stream for " + segment.getSrcUrl(), e);
@@ -219,7 +235,9 @@ public class Controller {
                 if (controllerStatus.areAllDownloadsRelatedToFinished(segment.getSrcUrl())) {
                     try {
                         joinSegments(segment.getSrcUrl());
-                        logger.info("{} fully downloaded at with {} kbs", segment.getSrcUrl(), segmentSizeSaved /1024);
+                        String fileName = controllerStatus.getStorage(0).get().getFileName();
+                        String approxSize = String.format("%.2f", segmentSizeSaved / FileUtils.ONE_MB);
+                        logger.info("{} fully downloaded; path {}; size {} MB", segment.getSrcUrl(),fileName, approxSize);
 
                     } catch (IOException e) {
                         logger.error("error while joining the storage stream for " + segment.getSrcUrl(), e);
@@ -234,7 +252,7 @@ public class Controller {
 
     }
 
-    public long getSegmentSizeSaved() {
+    public double getSegmentSizeSaved() {
         return segmentSizeSaved;
     }
 
@@ -262,28 +280,28 @@ public class Controller {
     }
 
     private List<Segment> createSegments() {
-        List<Segment> segments = segmentsCalculator.getSegments(maxConcurrentDownload, configuration.getDownloaderConfiguration(), downloadInformation);
+        List<Segment> segments = segmentsCalculator.getSegments(maxConcurrentDownload, config.getDownloaderConfiguration(), resourceInformation);
         segments.forEach(segment -> segment.setStatus(DownloadStatus.IDLE));
         return segments;
 
     }
 
-    private DownloadInformation getFileInformation(int maxAttempts) {
-        //we maintain the same logic and request this a few time until declaring failure
+    private ResourceInformation getFileInformation(int maxAttempts) {
+        //we maintain the same logic and request this a few times until declaring failure
         int attempt = 1;
 
-        DownloadInformation info = new DownloadInformation(url, false, 0);
+        ResourceInformation base = new ResourceInformation(url, false, 0);
         while (attempt <= maxAttempts) {
             try {
-                return protocolHandler.getInfo(this.url);
-
+                ResourceInformation information = protocolHandler.getInfo(this.url,resourceParameters);
+                if(information != null)return information;
             } catch (DownloadException e) {
                 logger.error(String.format("Error while retrieving the information related to %s attempt %d max attempt allowed %d", url, attempt, maxAttempts), e);
                 attempt++;
             }
 
         }
-        return info;
+        return base;
     }
 
 

@@ -1,27 +1,25 @@
 package agoda.downloader;
 
-import agoda.storage.LazyStorage;
-import agoda.storage.Storage;
+import agoda.storage.StorageSupplier;
 
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Future;
-import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 public class ControllerStatus {
 
     private HashMap<Integer, Segment> segmentList;
 
-    private HashMap<Integer, LazyStorage> storageList;
+    private HashMap<Integer, StorageSupplier> storageList;
 
     private HashMap<Integer, Future> tasks;
 
-    private int concurrency;
+    int concurrency;
 
-    private ControllerStatus(HashMap<Integer, Segment> segmentList, HashMap<Integer, LazyStorage> storageList, int concurrency) {
+    public ControllerStatus(HashMap<Integer, Segment> segmentList, HashMap<Integer, StorageSupplier> storageList, int concurrency) {
         this.segmentList = segmentList;
         this.storageList = storageList;
         this.concurrency = concurrency;
@@ -35,7 +33,19 @@ public class ControllerStatus {
         });
     }
 
-    LazyStorage getStorage(int segmentIndex) {
+    public HashMap<Integer, StorageSupplier> getStorageList() {
+        return storageList;
+    }
+
+    public void setStorageList(HashMap<Integer, StorageSupplier> storageList) {
+        this.storageList = storageList;
+    }
+
+    public HashMap<Integer, Segment> getSegmentList() {
+        return segmentList;
+    }
+
+    StorageSupplier getStorage(int segmentIndex) {
         return storageList.get(segmentIndex);
     }
 
@@ -97,11 +107,12 @@ public class ControllerStatus {
 
     void decConcurrency() {
         concurrency--;
+        concurrency = Math.max(1,concurrency);
     }
 
     static class Builder {
         private HashMap<Integer, Segment> segmentList = new HashMap<>();
-        private HashMap<Integer, LazyStorage> storageList = new HashMap<>();
+        private HashMap<Integer, StorageSupplier> storageList = new HashMap<>();
         private int concurrency = 0;
 
         Builder init(int concurrency) {
@@ -109,7 +120,7 @@ public class ControllerStatus {
             return this;
         }
 
-        Builder add(Segment segment, LazyStorage storageSupplier) {
+        Builder add(Segment segment, StorageSupplier storageSupplier) {
             int key = segment.getSegmentIndex();
             segmentList.putIfAbsent(key, segment);
             storageList.putIfAbsent(key, storageSupplier);

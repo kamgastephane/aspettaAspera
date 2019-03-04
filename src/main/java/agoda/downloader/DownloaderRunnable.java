@@ -7,6 +7,8 @@ import agoda.protocols.ProtocolHandler;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import java.time.Duration;
+import java.time.Instant;
 import java.util.concurrent.LinkedBlockingQueue;
 
 
@@ -17,6 +19,9 @@ public class DownloaderRunnable implements Runnable {
     private ProtocolHandler handler;
     private LinkedBlockingQueue<ResultMessage> queue;
     private DownloadBlock block;
+    private int writeCount = 0;
+
+    //TODO use correlationID in the logs
     DownloaderRunnable(Segment segment, ProtocolHandler protocolHandler, LinkedBlockingQueue<ResultMessage> resultMessageBlockingQueue) {
 
 
@@ -29,6 +34,8 @@ public class DownloaderRunnable implements Runnable {
     private ProgressListener consumer = new ProgressListener() {
         @Override
         public boolean consume(byte[]bytes) throws DownloadException {
+
+            writeCount++;
             if(bytes == null)
             {
                 block.update(0);
@@ -87,21 +94,28 @@ public class DownloaderRunnable implements Runnable {
             long end = start + block.getRequestRange() -1;
 
             try {
-                long watchStart = System.currentTimeMillis();
 
+                //the writeCount is used to make sure at each cycle, the Consume method is getting called, A countDownLatch could be used as well for a thread safe
+                writeCount = 0;
 
-
-                //TODO handle parameters as well
-                //TODO check the bytes red during this trip
-                //  IF not data was red increase the retrycount
+                Instant now = Instant.now();
                 if(useRangeRequest)
                 {
                     handler.download(block.getSrcUrl(),start,end, consumer);
                 }else {
                     handler.download(block.getSrcUrl(), consumer);
                 }
-                long watchEnd = System.currentTimeMillis();
-                block.updateRate(watchEnd - watchStart);
+
+                Instant then = Instant.now();
+                Duration duration = Duration.between(now,then);
+
+                if (writeCount==0)
+                {
+                    //nothing was written to the disk, something maybe went wrong, i handle it as an error
+                    block.update(0);
+                }
+
+                block.updateRate(duration.toMillis());
 
             } catch (DownloadException e) {
                 logger.error(e.getMessage(), e.getCause());

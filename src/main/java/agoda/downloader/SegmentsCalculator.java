@@ -15,6 +15,6 @@ public interface SegmentsCalculator {
      * @param information         informations about the stream to be downloaded
      * @return a division of the stream in segment with a defined size
      */
-    List<Segment> getSegments(int desiredSegmentCount, DownloaderConfiguration configuration, DownloadInformation information);
+    List<Segment> getSegments(int desiredSegmentCount, DownloaderConfiguration configuration, ResourceInformation information);
 
 }

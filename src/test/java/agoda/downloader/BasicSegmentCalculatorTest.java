@@ -13,7 +13,7 @@ public class BasicSegmentCalculatorTest {
     public void getSegmentsWhenTheRangeIsSetAtOff() {
         BasicSegmentCalculator segmentCalculator = BasicSegmentCalculator.getInstance();
 
-        DownloadInformation fileWithoutRangeHeader = get(false,2 * 1024 * 1024);
+        ResourceInformation fileWithoutRangeHeader = get(false,2 * 1024 * 1024);
         DownloaderConfiguration configuration = get(2 * 1024 * 1024,2 * 1024 * 1024,100,1024 * 1024);
         List<Segment> segments = segmentCalculator.getSegments(configuration.getMaxConcurrency(), configuration, fileWithoutRangeHeader);
 
@@ -42,7 +42,7 @@ public class BasicSegmentCalculatorTest {
     public void getSegmentsWhenTheDefaultSegmentSizeIsLessThanTheSegmentMinSize() {
         BasicSegmentCalculator segmentCalculator =  BasicSegmentCalculator.getInstance();
         long size = 100 * 1024 * 1024;
-        DownloadInformation file = get(true,size);
+        ResourceInformation file = get(true,size);
         DownloaderConfiguration configuration = get(2 * 1024 * 1024,500 * 1024 * 1024,100,1024 * 1024);
         List<Segment> segments = segmentCalculator.getSegments(configuration.getMaxConcurrency(), configuration, file);
 
@@ -63,7 +63,7 @@ public class BasicSegmentCalculatorTest {
         BasicSegmentCalculator segmentCalculator = BasicSegmentCalculator.getInstance();
         long size = 5 * 1024 * 1024 * 1024L + (1024 * 1024);
 
-        DownloadInformation file = get(true,size); //5gb + 1mb
+        ResourceInformation file = get(true,size); //5gb + 1mb
         DownloaderConfiguration configuration = get(2 * 1024 * 1024,500 * 1024 * 1024,5,1024*1024); //max size at 500mb
         List<Segment> segments = segmentCalculator.getSegments(configuration.getMaxConcurrency(), configuration, file);
 
@@ -78,9 +78,9 @@ public class BasicSegmentCalculatorTest {
 
     }
 
-    public DownloadInformation get(boolean acceptRange,long size)
+    public ResourceInformation get(boolean acceptRange, long size)
     {
-        return new DownloadInformation("",acceptRange,size);
+        return new ResourceInformation("",acceptRange,size);
     }
     public DownloaderConfiguration get(final long minSize, final long maxSize, final int maxConcurrency,int chunkSize)
     {

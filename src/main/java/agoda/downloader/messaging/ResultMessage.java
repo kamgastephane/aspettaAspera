@@ -1,6 +1,5 @@
 package agoda.downloader.messaging;
 
-import agoda.downloader.DownloadException;
 import agoda.downloader.DownloadStatus;
 
 public class ResultMessage implements DownloaderMessage {
@@ -16,13 +15,11 @@ public class ResultMessage implements DownloaderMessage {
 
 
     public ResultMessage(int segmentId, DownloadStatus status) {
-        this.segmentId = segmentId;
-        this.status = status;
+       this(segmentId,status,0);
     }
     public ResultMessage(int segmentId, DownloadStatus status,double rate) {
-        this.segmentId = segmentId;
-        this.status = status;
-        this.rate = rate;
+        this(segmentId,status,null,0);
+
     }
     public ResultMessage(int segmentId, DownloadStatus status, byte[] content,double rate) {
         this.segmentId = segmentId;
@@ -39,9 +36,6 @@ public class ResultMessage implements DownloaderMessage {
         return status;
     }
 
-    public void setRate(long rate) {
-        this.rate = rate;
-    }
 
     public byte[] getContent() {
         return content;

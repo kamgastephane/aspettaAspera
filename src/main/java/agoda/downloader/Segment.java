@@ -1,10 +1,7 @@
 package agoda.downloader;
 
-import org.apache.commons.io.FileUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-
-import java.util.Date;
 
 /**
  * Note: this class has a natural ordering that is inconsistent with equals
@@ -82,6 +79,10 @@ public class Segment implements Comparable<Segment> {
 
     public void setRate(double rate) {
         this.rate = rate;
+    }
+
+    public double getRate() {
+        return rate;
     }
 
     String getSrcUrl() {

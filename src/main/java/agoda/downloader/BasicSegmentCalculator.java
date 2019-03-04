@@ -10,14 +10,14 @@ public class BasicSegmentCalculator implements SegmentsCalculator {
     private BasicSegmentCalculator() {
     }
 
-    static BasicSegmentCalculator getInstance() {
+    public static BasicSegmentCalculator getInstance() {
         return BasicSegmentCalculatorSingleton.INSTANCE;
     }
     private static class BasicSegmentCalculatorSingleton {
         private static final BasicSegmentCalculator INSTANCE = new BasicSegmentCalculator();
     }
     @Override
-    public List<Segment> getSegments(int desiredSegmentCount, DownloaderConfiguration configuration, DownloadInformation information) {
+    public List<Segment> getSegments(int desiredSegmentCount, DownloaderConfiguration configuration, ResourceInformation information) {
 
 
         List<Segment> segments = new ArrayList<>();

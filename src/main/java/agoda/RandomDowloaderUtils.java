@@ -10,7 +10,7 @@ public  final class RandomDowloaderUtils {
 
     public static boolean IsNullOrWhiteSpace(String input)
     {
-        return input != null && !input.trim().isEmpty();
+        return input == null || input.trim().isEmpty();
     }
 
 }

@@ -1,16 +1,14 @@
 package agoda.protocols;
 
 import agoda.downloader.DownloadException;
-import agoda.downloader.DownloadInformation;
+import agoda.downloader.ResourceInformation;
 
-import java.util.Dictionary;
-import java.util.HashMap;
 import java.util.Map;
 
 
 public interface ProtocolHandler {
 
-    byte[] EOF = new byte[0];
+    byte[] EOF = {0};
 
 
     String getScheme();
@@ -51,11 +49,11 @@ public interface ProtocolHandler {
 
     /**
      * @param url the url we want some information about
-     *            The size should be always
-     *            if {@link DownloadInformation#isAcceptRange()} is set at true, the download will be done on multiple thread
-     * @return the filled {@link DownloadInformation}
+     * @param parameters list of parameters related to the url, and specific to the protocol e.g. username,password, proxy, key...
+     *            if {@link ResourceInformation#isAcceptRange()} is set at true, the download will be done on multiple thread
+     * @return the filled {@link ResourceInformation}
      * @throws DownloadException in case of error; in case of error of any kind, your code should wrap the error and throw a {@link DownloadException}
      *                           this allow the retry system to kick in
      */
-    DownloadInformation getInfo(String url) throws DownloadException;
+    ResourceInformation getInfo(String url, Map<String,String> parameters) throws DownloadException;
 }

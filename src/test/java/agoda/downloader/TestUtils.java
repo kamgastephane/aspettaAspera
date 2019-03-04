@@ -2,71 +2,43 @@ package agoda.downloader;
 
 import agoda.configuration.DownloaderConfiguration;
 import agoda.configuration.StorageConfiguration;
-import agoda.protocols.ProgressListener;
-import agoda.protocols.ProtocolHandler;
-import agoda.storage.LazyStorage;
-import agoda.storage.Storage;
+import agoda.storage.*;
 
 import java.io.File;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.function.Supplier;
 
 public class TestUtils {
 
 
 
-    public static List<Segment> getSegments(int count)
+
+    static StorageFactory getMockStorageFactory(long size)
     {
-        List<Segment> segments = new ArrayList<>();
-        for (int i = 0; i < count; i++) {
-            Segment s = new Segment.SegmentBuilder()
-                    .setSegmentIndex(i)
-                    .createSegment();
-        }
-        return segments;
-
-    }
-    public static File getTempDirectory() {
-        try {
-            return Files.createTempDirectory("agoda").toFile();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        return null;
-
-    }
-
-    static ProtocolHandler get(Supplier<byte[]> supplier)
-    {
-        return new ProtocolHandler() {
+        return new StorageFactory() {
             @Override
-            public String getScheme() {
-                return null;
-            }
+            public StorageSupplier getStorage(String url, String destination, int bufferSize) {
+                return new StorageSupplier() {
+                    boolean isInit;
+                    MockStorage storage;
+                    @Override
+                    public boolean isInit() {
+                        return isInit;
+                    }
 
-            @Override
-            public void download(String url, long from, long to, ProgressListener consumer) throws DownloadException {
-
-            }
-
-            @Override
-            public void download(String url, ProgressListener consumer) throws DownloadException {
-                    consumer.consume(supplier.get());
-            }
-
-
-
-
-            @Override
-            public DownloadInformation getInfo(String url) throws DownloadException {
-                return null;
+                    @Override
+                    public Storage get() {
+                        if (!isInit)
+                        {
+                            isInit = true;
+                            storage = new MockStorage((int) size);
+                        }
+                        return storage;
+                    }
+                };
             }
         };
     }
-    static DownloaderConfiguration get(long minSize,long maxSize,int maxConcurrency,int maxRetry,int chunsize)
+
+    public static DownloaderConfiguration getMockDownloaderConfiguration(long minSize, long maxSize, int maxConcurrency, int maxRetry, int chunsize)
     {
         return new DownloaderConfiguration() {
             @Override
@@ -95,11 +67,11 @@ public class TestUtils {
             }
         };
     }
-    static LazyStorage get(Storage storage)
+    static LazyBufferedStorage getMockLazyStorage(Storage storage)
     {
-        return new LazyStorage(() -> storage);
+        return new LazyBufferedStorage(() -> storage);
     }
-    static StorageConfiguration get(long bufferSize,File directory)
+    public static StorageConfiguration getMockStorageConfiguration(long bufferSize, File directory)
     {
         return new StorageConfiguration() {
             @Override
@@ -117,7 +89,24 @@ public class TestUtils {
             }
         };
     }
+    static StorageConfiguration getMock(long bufferSize,String directory)
+    {
+        return new StorageConfiguration() {
+            @Override
+            public int getOutputStreamBufferSize() {
+                return (int)bufferSize;
+            }
 
+
+
+            @Override
+            public String getDownloadFolder() {
+
+                return directory;
+
+            }
+        };
+    }
 
 
 }

@@ -1,7 +1,8 @@
 package agoda.protocols;
 
+import agoda.RandomDowloaderUtils;
 import agoda.downloader.DownloadException;
-import agoda.downloader.DownloadInformation;
+import agoda.downloader.ResourceInformation;
 import org.apache.commons.io.FileUtils;
 import org.apache.http.*;
 import org.apache.http.client.methods.CloseableHttpResponse;
@@ -16,18 +17,19 @@ import org.apache.logging.log4j.Logger;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Map;
 
 public class HttpProtocolHandler implements ProtocolHandler {
 
     private static final Logger logger = LogManager.getLogger();
 
     private static final long MAX_CHUNK_SIZE = FileUtils.ONE_MB * 100;
-    private static final int DEFAULT_CHUNK_SIZE = (int) (FileUtils.ONE_MB * 2);
+    private static final int DEFAULT_CHUNK_SIZE = (int) (FileUtils.ONE_MB);
     private static final int RETRY = 2;
 
     private DefaultHttpRequestRetryHandler retryhandler = new DefaultHttpRequestRetryHandler(RETRY, true);
     //TODO keep the connection alive, verify the multithread issues
-    //TODO somebody must clease the client as well
+    //TODO somebody must close the client as well
     private final CloseableHttpClient httpclient = HttpClients.custom()
             .setRetryHandler(retryhandler).build();
 
@@ -94,38 +96,53 @@ public class HttpProtocolHandler implements ProtocolHandler {
         }
     }
 
-    private void stream(HttpEntity provider, int chunkSize, ProgressListener consumer) throws DownloadException, IOException {
-        byte[] result = new byte[chunkSize];
-        try (InputStream stream = provider.getContent()) {
-            boolean shouldConsume = true;
-            while (stream.read(result) != -1 && shouldConsume) {
-                //supply data to the consumer
-                shouldConsume = consumer.consume(result);
-            }
-        }
-    }
-
-
     @Override
-    public DownloadInformation getInfo(String url) throws DownloadException {
+    public ResourceInformation getInfo(String url, Map<String, String> parameters) throws DownloadException {
+        //TODO cache this to avoid sending it multiple time for the same url
         try {
             HttpHead request = new HttpHead(url);
             request.setHeader(HttpHeaders.RANGE, "bytes=" + (0) + "-" + (1));
+            long contentLength = 0;
 
             try (CloseableHttpResponse response = httpclient.execute(request)) {
 
-                HttpEntity entity = response.getEntity();
+                Header contentRange = response.getFirstHeader(HttpHeaders.CONTENT_RANGE);
+                if(contentRange!=null && !RandomDowloaderUtils.IsNullOrWhiteSpace(contentRange.getValue())){
+                    String value = contentRange.getValue().split("/")[1];
+                    try {
+                        contentLength = Long.parseLong(value);
+                    }catch (NumberFormatException e)
+                    {
+                        logger.error("failed to convert the content length {} received from the server",value);
+                    }
 
-                long contentLength = entity.getContentLength();
+                }
                 boolean acceptRange = false;
                 if (response.getStatusLine().getStatusCode() == HttpStatus.SC_PARTIAL_CONTENT) {
                     acceptRange = true;
                 }
-                return new DownloadInformation(url, acceptRange, contentLength);
+                return new ResourceInformation(url, acceptRange, contentLength);
 
             }
         }catch (IOException e) {
             throw new DownloadException("Exception when doing HEAD on " + url, e);
         }
     }
+
+    private void stream(HttpEntity provider, int chunkSize, ProgressListener consumer) throws DownloadException, IOException {
+        byte[] result = new byte[chunkSize];
+        try (InputStream stream = provider.getContent()) {
+            boolean shouldConsume = true;
+            int length;
+            while ((length = stream.read(result)) != -1 && shouldConsume) {
+                //supply data to the consumer
+                byte[]cpy = new byte[length];
+                System.arraycopy(result,0,cpy,0,length);
+                shouldConsume = consumer.consume(cpy);
+            }
+        }
+    }
+
+
+
 }

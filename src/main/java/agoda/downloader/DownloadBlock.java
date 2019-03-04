@@ -23,20 +23,20 @@ public class DownloadBlock extends Segment {
 
     boolean isRangeOutOfBounds(long range)
     {
-        return (startPosition+range>endPosition && endPosition>0);
+        return (startPosition+range>endPosition && hasSize());
     }
 
     void updateRate(long durationInMs)
     {
-        double sizeInKbit = (lastRangeRead * 8) / 1024D;
-        double durationInSec = durationInMs * 1000D;
-        rate = sizeInKbit / durationInSec;
+        double sizeInKbyte = (lastRangeRead) / 1024D;
+        double durationInSec = durationInMs / 1000D;
+        rate = sizeInKbyte / durationInSec;
         rates.add(rate);
-        logger.info("Received {} kbit from server for url {} on segment {}, currentStatus:{} ", sizeInKbit, srcUrl, segmentIndex, status.toString());
+        logger.debug("Received {} kb from server for url {} on segment {}, currentStatus:{} ", sizeInKbyte, srcUrl, segmentIndex, status.toString());
 
     }
 
-    public  double  getRate() {
+    public double   getRate() {
         double totalevent = rates.stream().mapToDouble(f -> f).sum();
         return totalevent / rates.size();
     }
@@ -60,13 +60,18 @@ public class DownloadBlock extends Segment {
             this.lastReception = LocalDateTime.now();
             this.startPosition += range;
             //if the end position is <=0 we have a download with unknow size
-            if (startPosition > endPosition && endPosition>0) {
+            if (startPosition > endPosition && hasSize()) {
                 this.status = DownloadStatus.FINISHED;
             }
 
         }
 
     }
+
+    private boolean hasSize() {
+        return endPosition>0;
+    }
+
     public void setLastReception(LocalDateTime lastReception) {
         this.lastReception = lastReception;
     }

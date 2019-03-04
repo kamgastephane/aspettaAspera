@@ -12,6 +12,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.nio.charset.StandardCharsets;
+import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.*;
 
@@ -48,7 +49,7 @@ public class DownloaderRunnableTest {
             @Override
             public void download(String url, ProgressListener consumer) throws DownloadException {
                 try {
-                    TimeUnit.SECONDS.sleep(1);
+                    TimeUnit.SECONDS.sleep(10);
                     byte[] buffer = new byte[1];
                     random.nextBytes(buffer);
                     consumer.consume(buffer);
@@ -61,7 +62,7 @@ public class DownloaderRunnableTest {
 
 
             @Override
-            public DownloadInformation getInfo(String url) throws DownloadException {
+            public ResourceInformation getInfo(String url, Map<String, String> parameters) throws DownloadException {
                 return null;
             }
         };
@@ -80,6 +81,122 @@ public class DownloaderRunnableTest {
         future.cancel(true);
         TimeUnit.SECONDS.sleep(2);
         assert service.getActiveCount() == 0;
+
+        ResultMessage message = queue.take();
+        assert message.getStatus().equals(DownloadStatus.ERROR);
+
+
+    }
+    @Test
+    public void testThatTheDownloadEventuallyStopAfterTheMaxRetryTimeIfTheProtocolNeverConsume() throws InterruptedException {
+        final int[] tried = {0};
+        ProtocolHandler mockHandler = new ProtocolHandler() {
+            @Override
+            public String getScheme() {
+                return null;
+            }
+
+            @Override
+            public void download(String url, long from, long to, ProgressListener consumer) throws DownloadException {
+                download(url,consumer);
+
+            }
+
+            @Override
+            public void download(String url, ProgressListener consumer) throws DownloadException {
+                tried[0]++;
+
+            }
+
+
+            @Override
+            public ResourceInformation getInfo(String url, Map<String, String> parameters) throws DownloadException {
+                return null;
+            }
+        };
+        Segment segment = new Segment.SegmentBuilder()
+                .setSegmentIndex(0)
+                .setRequestRange(1)
+                .setEndPosition(1024)
+                .setMaxRetry(3)
+                .createSegment();
+        LinkedBlockingQueue<ResultMessage> queue = new LinkedBlockingQueue<>();
+
+        DownloaderRunnable runnable = new DownloaderRunnable(segment, mockHandler, queue);
+
+        ThreadPoolExecutor service = (ThreadPoolExecutor) Executors.newFixedThreadPool(1);
+
+        service.submit(runnable);
+
+        ResultMessage message = queue.take();
+        assert message.getStatus().equals(DownloadStatus.ERROR);
+        assert tried[0] == 3;
+
+
+    }
+
+    @Test
+    public void testTheDownloadRateIsCloseToWhatIsExpected() throws InterruptedException, ExecutionException {
+        ProtocolHandler mockHandler = new ProtocolHandler() {
+            @Override
+            public String getScheme() {
+                return null;
+            }
+
+            @Override
+            public void download(String url, long from, long to, ProgressListener consumer) throws DownloadException {
+                download(url,consumer);
+
+            }
+
+            @Override
+            public void download(String url, ProgressListener consumer) throws DownloadException {
+                try {
+                    TimeUnit.SECONDS.sleep(1);
+                    byte[] buffer = new byte[1024];
+                    random.nextBytes(buffer);
+                    consumer.consume(buffer);
+                } catch (InterruptedException e) {
+                    logger.error("i triggered an exception after 1 seconds",e);
+                    throw new DownloadException("",new RuntimeException("",new RuntimeException("",e)));
+                }
+
+            }
+
+
+            @Override
+            public ResourceInformation getInfo(String url, Map<String, String> parameters) throws DownloadException {
+                return null;
+            }
+        };
+        Segment segment = new Segment.SegmentBuilder()
+                .setSegmentIndex(0)
+                .setRequestRange(1)
+                .setEndPosition((1024 *30)-1)
+                .createSegment();
+        LinkedBlockingQueue<ResultMessage> queue = new LinkedBlockingQueue<>();
+
+        DownloaderRunnable runnable = new DownloaderRunnable(segment, mockHandler, queue);
+
+        ThreadPoolExecutor service = (ThreadPoolExecutor) Executors.newFixedThreadPool(1);
+        service.submit(runnable);
+        int count = 0;
+        TimeUnit.SECONDS.sleep(40);
+
+        ResultMessage message = null;
+        while (count < 30)
+        {
+            message = queue.take();
+            count++;
+        }
+        assert message.getStatus().equals(DownloadStatus.FINISHED);
+
+        //as i am downloading at approx 8kbit/s, i expect a precision at 0.1%
+        System.out.println(message.getRate());
+        assert Math.abs((message.getRate()-8)) < 0.1;
+
+
+
 
 
     }
@@ -125,7 +242,7 @@ public class DownloaderRunnableTest {
 
 
             @Override
-            public DownloadInformation getInfo(String url) throws DownloadException {
+            public ResourceInformation getInfo(String url, Map<String, String> parameters) throws DownloadException {
                 return null;
             }
         };
@@ -190,7 +307,7 @@ public class DownloaderRunnableTest {
             }
 
             @Override
-            public DownloadInformation getInfo(String url) throws DownloadException {
+            public ResourceInformation getInfo(String url, Map<String, String> parameters) throws DownloadException {
                 return null;
             }
         };
@@ -256,7 +373,7 @@ public class DownloaderRunnableTest {
             }
 
             @Override
-            public DownloadInformation getInfo(String url) throws DownloadException {
+            public ResourceInformation getInfo(String url, Map<String, String> parameters) throws DownloadException {
                 return null;
             }
         };
@@ -339,7 +456,7 @@ public class DownloaderRunnableTest {
             }
 
             @Override
-            public DownloadInformation getInfo(String url) throws DownloadException {
+            public ResourceInformation getInfo(String url, Map<String, String> parameters) throws DownloadException {
                 return null;
             }
         };
@@ -414,9 +531,11 @@ public class DownloaderRunnableTest {
             }
 
             @Override
-            public DownloadInformation getInfo(String url) throws DownloadException {
+            public ResourceInformation getInfo(String url, Map<String, String> parameters) throws DownloadException {
                 return null;
             }
+
+
         };
         LinkedBlockingQueue<ResultMessage> queue = new LinkedBlockingQueue<>();
         DownloaderRunnable runnable = new DownloaderRunnable(segment, mockHandler, queue);

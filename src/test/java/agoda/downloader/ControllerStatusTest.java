@@ -1,10 +1,8 @@
 package agoda.downloader;
 
-import agoda.storage.LazyStorage;
 import agoda.storage.Storage;
 import org.junit.Test;
 
-import java.io.IOException;
 import java.util.List;
 
 import static org.junit.Assert.assertEquals;
@@ -29,7 +27,7 @@ public class ControllerStatusTest {
                 }
 
                 @Override
-                public void close() throws IOException {
+                public void close() {
 
                 }
 
@@ -39,7 +37,7 @@ public class ControllerStatusTest {
                 }
             };
 
-            builder.add(segment,TestUtils.get(storage));
+            builder.add(segment,TestUtils.getMockLazyStorage(storage));
         }
         ControllerStatus status = builder.build();
         List<Segment> next = status.getNext();
