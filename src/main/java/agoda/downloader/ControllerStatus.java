@@ -2,10 +2,8 @@ package agoda.downloader;
 
 import agoda.storage.StorageSupplier;
 
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.Future;
 import java.util.stream.Collectors;
 
@@ -17,13 +15,26 @@ public class ControllerStatus {
 
     private HashMap<Integer, Future> tasks;
 
-    int concurrency;
+    private int concurrency;
 
-    public ControllerStatus(HashMap<Integer, Segment> segmentList, HashMap<Integer, StorageSupplier> storageList, int concurrency) {
-        this.segmentList = segmentList;
-        this.storageList = storageList;
+    private SegmentScheduler segmentScheduler;
+
+    public ControllerStatus(int concurrency,SegmentScheduler segmentScheduler) {
+
+        if (concurrency == 0)
+            throw new IllegalArgumentException("concurrency for downloader should be greater than 0");
         this.concurrency = concurrency;
+        this.segmentList = new HashMap<>();
+        this.storageList = new HashMap<>();
         this.tasks = new HashMap<>();
+        this.segmentScheduler = segmentScheduler;
+    }
+
+    public void  add(Segment segment, StorageSupplier storageSupplier)
+    {
+        int key = segment.getSegmentIndex();
+        segmentList.putIfAbsent(key, segment);
+        storageList.putIfAbsent(key, storageSupplier);
     }
 
     void updateStatus(int segmentIndex, DownloadStatus status) {
@@ -32,16 +43,14 @@ public class ControllerStatus {
             return segment;
         });
     }
-
-    public HashMap<Integer, StorageSupplier> getStorageList() {
+    //TODO fix this
+    HashMap<Integer, StorageSupplier> getStorageList() {
         return storageList;
     }
 
-    public void setStorageList(HashMap<Integer, StorageSupplier> storageList) {
-        this.storageList = storageList;
-    }
 
-    public HashMap<Integer, Segment> getSegmentList() {
+    //TODO fix this
+    HashMap<Integer, Segment> getSegmentList() {
         return segmentList;
     }
 
@@ -55,21 +64,7 @@ public class ControllerStatus {
      */
     List<Segment> getNext() {
 
-        Map<DownloadStatus, List<Segment>> segmentsGroupByState = segmentList.values().stream().collect(Collectors.groupingBy(Segment::getStatus));
-        List<Segment> downloadingSegments = segmentsGroupByState.get(DownloadStatus.DOWNLOADING);
-        int downloading = downloadingSegments == null? 0:downloadingSegments.size();
-        int nextSize = concurrency - downloading;
-        if (nextSize > 0) {
-            //i can launch some more runnable
-            List<Segment> idleSegments = segmentsGroupByState.get(DownloadStatus.IDLE);
-            if(idleSegments!=null)
-            {
-                List<Segment> next = idleSegments.subList(0, nextSize);
-                next.forEach(Segment::downloading);
-                return next;
-            }
-        }
-        return Collections.emptyList();
+        return this.segmentScheduler.getNext(segmentList.values(),concurrency);
     }
 
     boolean areAllDownloadsRelatedToFinished(String url) {
@@ -110,30 +105,6 @@ public class ControllerStatus {
         concurrency = Math.max(1,concurrency);
     }
 
-    static class Builder {
-        private HashMap<Integer, Segment> segmentList = new HashMap<>();
-        private HashMap<Integer, StorageSupplier> storageList = new HashMap<>();
-        private int concurrency = 0;
-
-        Builder init(int concurrency) {
-            this.concurrency = concurrency;
-            return this;
-        }
-
-        Builder add(Segment segment, StorageSupplier storageSupplier) {
-            int key = segment.getSegmentIndex();
-            segmentList.putIfAbsent(key, segment);
-            storageList.putIfAbsent(key, storageSupplier);
-
-            return this;
-        }
-
-        ControllerStatus build() {
-            if (concurrency == 0)
-                throw new IllegalArgumentException("concurrency for downloader should be greater than 0");
-            return new ControllerStatus(segmentList, storageList, concurrency);
-        }
 
 
-    }
 }

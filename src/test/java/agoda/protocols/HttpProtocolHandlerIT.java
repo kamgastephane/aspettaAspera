@@ -111,7 +111,7 @@ public class HttpProtocolHandlerIT {
         String url = server.getURI().toString()+"static/music.mp3";
 
         ProtocolHandler protocolHandler = ProtocolHandlerFactory.get(url);
-        DownloaderConfiguration mockDownloaderConfiguration = TestUtils.getMockDownloaderConfiguration(FileUtils.ONE_MB, FileUtils.ONE_MB * 2, 2, 2, (int) (FileUtils.ONE_KB * 100));
+        DownloaderConfiguration mockDownloaderConfiguration = TestUtils.getMockDownloaderConfiguration(FileUtils.ONE_MB, FileUtils.ONE_MB * 2, 2, 2, (int) (FileUtils.ONE_KB * 100),false);
         StorageFactory storageFactory = StorageFactoryImpl.getInstance();
 
         StorageConfiguration storageConfiguration = new StorageConfiguration() {
@@ -136,7 +136,7 @@ public class HttpProtocolHandlerIT {
                 return storageConfiguration;
             }
         };
-        BasicSegmentCalculator segmentCalculator = BasicSegmentCalculator.getInstance();
+        SimpleSegmentCalculator segmentCalculator = SimpleSegmentCalculator.getInstance();
         Controller controller = new Controller(url, new HashMap<>(),configuration,2,
                 segmentCalculator,protocolHandler,storageFactory);
         controller.setup();

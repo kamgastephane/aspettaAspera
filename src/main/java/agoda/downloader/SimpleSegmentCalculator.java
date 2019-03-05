@@ -5,16 +5,16 @@ import agoda.configuration.DownloaderConfiguration;
 import java.util.ArrayList;
 import java.util.List;
 
-public class BasicSegmentCalculator implements SegmentsCalculator {
+public class SimpleSegmentCalculator implements SegmentDivider {
 
-    private BasicSegmentCalculator() {
+    private SimpleSegmentCalculator() {
     }
 
-    public static BasicSegmentCalculator getInstance() {
+    public static SimpleSegmentCalculator getInstance() {
         return BasicSegmentCalculatorSingleton.INSTANCE;
     }
     private static class BasicSegmentCalculatorSingleton {
-        private static final BasicSegmentCalculator INSTANCE = new BasicSegmentCalculator();
+        private static final SimpleSegmentCalculator INSTANCE = new SimpleSegmentCalculator();
     }
     @Override
     public List<Segment> getSegments(int desiredSegmentCount, DownloaderConfiguration configuration, ResourceInformation information) {

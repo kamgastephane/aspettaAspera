@@ -61,7 +61,7 @@ public class ControllerIT {
         Configuration configuration = new Configuration() {
             @Override
             public DownloaderConfiguration getDownloaderConfiguration() {
-                return TestUtils.getMockDownloaderConfiguration(FileUtils.ONE_MB,FileUtils.ONE_MB*2,2,3,(int)size);
+                return TestUtils.getMockDownloaderConfiguration(FileUtils.ONE_MB,FileUtils.ONE_MB*2,2,3,(int)size,false);
             }
 
             @Override
@@ -70,7 +70,7 @@ public class ControllerIT {
             }
         };
         Controller controller = new Controller(url,null,configuration,2,
-                BasicSegmentCalculator.getInstance(),handler,
+                SimpleSegmentCalculator.getInstance(),handler,
                 StorageFactoryImpl.getInstance());
 
         //i expect the download to be done with 2 thread
@@ -158,7 +158,7 @@ public class ControllerIT {
         Configuration configuration = new Configuration() {
             @Override
             public DownloaderConfiguration getDownloaderConfiguration() {
-                return TestUtils.getMockDownloaderConfiguration(FileUtils.ONE_MB,FileUtils.ONE_MB*2,2,3, (int) size);
+                return TestUtils.getMockDownloaderConfiguration(FileUtils.ONE_MB,FileUtils.ONE_MB*2,2,3, (int) size,false);
             }
 
             @Override
@@ -167,7 +167,7 @@ public class ControllerIT {
             }
         };
         Controller controller = new Controller(url,null,configuration,2,
-                BasicSegmentCalculator.getInstance(),handler,
+                SimpleSegmentCalculator.getInstance(),handler,
                 StorageFactoryImpl.getInstance());
 
 

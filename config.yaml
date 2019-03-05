@@ -1,10 +1,13 @@
-downloader
-  #size in ko
-  minsize
-  maxsize
+downloader:
+  #size in ko related to a single segment
+  minsize: 10485760  #10MB
+  maxsize: 524288000  #500MB
   #max number of concurrent thread downloading
-  maxconcurrency
+  maxconcurrency: 5
+  maxretry: 3
+  chunksize: 2097152
+  #useadaptivescheduler: true
 
-storage
-  bufferoutputstream
-    buffersize
+storage:
+  buffersize: 2097152 #2MB
+  folder: /Users/stephane/Downloads/agoda/

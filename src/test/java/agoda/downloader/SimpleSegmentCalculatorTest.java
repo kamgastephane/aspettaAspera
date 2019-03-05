@@ -7,11 +7,11 @@ import java.util.List;
 
 import static org.junit.Assert.assertEquals;
 
-public class BasicSegmentCalculatorTest {
+public class SimpleSegmentCalculatorTest {
 
     @Test
     public void getSegmentsWhenTheRangeIsSetAtOff() {
-        BasicSegmentCalculator segmentCalculator = BasicSegmentCalculator.getInstance();
+        SimpleSegmentCalculator segmentCalculator = SimpleSegmentCalculator.getInstance();
 
         ResourceInformation fileWithoutRangeHeader = get(false,2 * 1024 * 1024);
         DownloaderConfiguration configuration = get(2 * 1024 * 1024,2 * 1024 * 1024,100,1024 * 1024);
@@ -40,7 +40,7 @@ public class BasicSegmentCalculatorTest {
 
     @Test
     public void getSegmentsWhenTheDefaultSegmentSizeIsLessThanTheSegmentMinSize() {
-        BasicSegmentCalculator segmentCalculator =  BasicSegmentCalculator.getInstance();
+        SimpleSegmentCalculator segmentCalculator =  SimpleSegmentCalculator.getInstance();
         long size = 100 * 1024 * 1024;
         ResourceInformation file = get(true,size);
         DownloaderConfiguration configuration = get(2 * 1024 * 1024,500 * 1024 * 1024,100,1024 * 1024);
@@ -60,7 +60,7 @@ public class BasicSegmentCalculatorTest {
 
     @Test
     public void getSegmentsWhenTheDefaultSegmentSizeIsMoreThanTheSegmentMaxSize() {
-        BasicSegmentCalculator segmentCalculator = BasicSegmentCalculator.getInstance();
+        SimpleSegmentCalculator segmentCalculator = SimpleSegmentCalculator.getInstance();
         long size = 5 * 1024 * 1024 * 1024L + (1024 * 1024);
 
         ResourceInformation file = get(true,size); //5gb + 1mb

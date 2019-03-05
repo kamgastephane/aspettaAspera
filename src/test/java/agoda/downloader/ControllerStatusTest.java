@@ -13,8 +13,7 @@ public class ControllerStatusTest {
     @Test
     public void testThatget_TheNextSegmentToDownload_RespectTheAllowedAccuracy()
     {
-        ControllerStatus.Builder builder = new ControllerStatus.Builder();
-        builder = builder.init(5);
+        ControllerStatus status = new ControllerStatus(5,new BaseSegmentScheduler());
         for (int i = 0; i < 10; i++) {
             Segment segment = new Segment.SegmentBuilder()
                     .setSegmentIndex(i)
@@ -37,9 +36,8 @@ public class ControllerStatusTest {
                 }
             };
 
-            builder.add(segment,TestUtils.getMockLazyStorage(storage));
+            status.add(segment,TestUtils.getMockLazyStorage(storage));
         }
-        ControllerStatus status = builder.build();
         List<Segment> next = status.getNext();
         assertEquals(5, next.size());
         for (Segment segment : next) {

@@ -28,24 +28,27 @@ public class Controller {
     private String url;
     private Configuration config;
     private ProtocolHandler protocolHandler;
-    private SegmentsCalculator segmentsCalculator;
+    private SegmentDivider segmentDivider;
     private ResourceInformation resourceInformation;
     private LinkedBlockingQueue<ResultMessage> queue;
     private HashMap<String,String> resourceParameters;
     private StorageFactory storageFactory;
     private double segmentSizeSaved = 0;
 
-    public Controller(String url,HashMap<String,String> resourceParams, Configuration ctrlConfig, int maxConcurrentDownload,
-                      SegmentsCalculator segmentsCalculator,ProtocolHandler handler,
+    //TODO handle list of differents URLs...It should be straight forward at this point
+    public Controller(String url, HashMap<String,String> resourceParams, Configuration ctrlConfig, int maxConcurrentDownload,
+                      SegmentDivider segmentDivider, ProtocolHandler handler,
                       StorageFactory storageFactory
                      ) {
         this.maxConcurrentDownload = maxConcurrentDownload;
         this.url = url;
         this.config = ctrlConfig;
         this.resourceParameters = resourceParams;
-        this.segmentsCalculator = segmentsCalculator;
+        this.segmentDivider = segmentDivider;
         this.protocolHandler = handler;
         this.storageFactory = storageFactory;
+
+
 
     }
 
@@ -95,9 +98,18 @@ public class Controller {
 
 
         //create the controller status
-        Map<String, List<Segment>> segmentByUrl = segmentList.stream().collect(Collectors.groupingBy(Segment::getSrcUrl));
 
-        ControllerStatus.Builder builder = new ControllerStatus.Builder().init(effectiveConcurrency);
+        SegmentScheduler segmentScheduler;
+        if(config.getDownloaderConfiguration().useAdaptiveScheduler()){
+            segmentScheduler = new AdaptiveSegmentScheduler();
+        }else {
+            segmentScheduler = new BaseSegmentScheduler();
+        }
+        controllerStatus = new ControllerStatus(effectiveConcurrency,segmentScheduler);
+
+        //fill the controller status
+
+        Map<String, List<Segment>> segmentByUrl = segmentList.stream().collect(Collectors.groupingBy(Segment::getSrcUrl));
 
         segmentByUrl.forEach((url, segments) ->
         {
@@ -107,11 +119,10 @@ public class Controller {
                 logger.fatal("This is quite unusual, i have storage not corresponding to the segments to download! Download of the url {} will be cancelled", url);
             } else {
                 for (int i = 0; i < segments.size(); i++) {
-                    builder.add(segments.get(i), storageForUrl.get(i));
+                    controllerStatus.add(segments.get(i), storageForUrl.get(i));
                 }
             }
         });
-        controllerStatus = builder.build();
     }
 
 
@@ -123,10 +134,11 @@ public class Controller {
 
             List<Segment> next = controllerStatus.getNext();
             if (next.size() > 0) {
-                //we create the runnable task
+                logger.info("Found {} new segments to download",next.size());
+
                 Set<String> failedUrl = new HashSet<>();
                 for (Segment segment : next) {
-                    //the protocol handler cannot be null because of the constructor check
+
                     segment.setStatus(DownloadStatus.DOWNLOADING);
 
                     //we create the storage
@@ -136,6 +148,7 @@ public class Controller {
                         logger.warn("Failed to create some storage; {} Download of the url {} will be cancelled", url);
                         failedUrl.add(segment.getSrcUrl());
                     } else{
+                        //we create the runnable task
                         DownloaderRunnable runnable = new DownloaderRunnable(segment, protocolHandler, queue);
                         logger.info("Starts donwload of the segment at index {}",segment.getSegmentIndex());
                         Future future = pool.submit(runnable);
@@ -165,6 +178,8 @@ public class Controller {
         }
         //i'm done => all segments downloaded or al in error i will return
 
+        //i cleanup the resource
+        protocolHandler.close();
 
 
 
@@ -221,12 +236,14 @@ public class Controller {
             }
             if (DownloadStatus.FINISHED == resultMessage.getStatus()) {
                 try {
-                    controllerStatus.getStorage(segment.getSegmentIndex()).get().close();
-                    segment.setStatus(DownloadStatus.FINISHED);
-                    String approxSize = String.format("%.2f", segmentSizeSaved / FileUtils.ONE_MB);
+                    if(!segment.isFinished()){
+                        controllerStatus.getStorage(segment.getSegmentIndex()).get().close();
+                        segment.setStatus(DownloadStatus.FINISHED);
+                        String approxSize = String.format("%.2f", segmentSizeSaved / FileUtils.ONE_MB);
 
-                    logger.info("Segment {} fully downloaded; total size downloaded: {} MB", segment.getSegmentIndex(),approxSize);
+                        logger.info("Segment {} fully downloaded; total size downloaded: {} MB", segment.getSegmentIndex(),approxSize);
 
+                    }
 
                 } catch (IOException e) {
                     logger.error("error while closing the storage stream for " + segment.getSrcUrl(), e);
@@ -280,7 +297,7 @@ public class Controller {
     }
 
     private List<Segment> createSegments() {
-        List<Segment> segments = segmentsCalculator.getSegments(maxConcurrentDownload, config.getDownloaderConfiguration(), resourceInformation);
+        List<Segment> segments = segmentDivider.getSegments(maxConcurrentDownload, config.getDownloaderConfiguration(), resourceInformation);
         segments.forEach(segment -> segment.setStatus(DownloadStatus.IDLE));
         return segments;
 

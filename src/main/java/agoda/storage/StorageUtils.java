@@ -1,6 +1,5 @@
 package agoda.storage;
 
-import com.sun.istack.internal.NotNull;
 import org.apache.commons.io.FilenameUtils;
 
 import java.net.MalformedURLException;
@@ -17,7 +16,7 @@ public final class StorageUtils {
         return nakedFileName + "_" + count + "." + extension;
     }
 
-    static String getFileNameBasedOnUrl(@NotNull String inputUrl) throws MalformedURLException {
+    static String getFileNameBasedOnUrl(String inputUrl) throws MalformedURLException {
         URL url = null;
         url = new URL(inputUrl);
 

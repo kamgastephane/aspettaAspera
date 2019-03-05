@@ -27,5 +27,9 @@ public interface DownloaderConfiguration {
      */
     int getChunkSize();
 
+    default boolean useAdaptiveScheduler() {
+        return false;
+    }
+
 
 }

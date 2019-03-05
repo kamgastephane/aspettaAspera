@@ -56,4 +56,13 @@ public interface ProtocolHandler {
      *                           this allow the retry system to kick in
      */
     ResourceInformation getInfo(String url, Map<String,String> parameters) throws DownloadException;
+
+
+    /**
+     * //TODO remove the default
+     * clean any resource used by this protocolHandler
+     */
+    default void close() {
+
+    }
 }

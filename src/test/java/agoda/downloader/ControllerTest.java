@@ -35,7 +35,7 @@ public class ControllerTest {
         Configuration configuration = new Configuration() {
             @Override
             public DownloaderConfiguration getDownloaderConfiguration() {
-                return TestUtils.getMockDownloaderConfiguration(FileUtils.ONE_KB, FileUtils.ONE_KB * 16, 10, 3, (int) size);
+                return TestUtils.getMockDownloaderConfiguration(FileUtils.ONE_KB, FileUtils.ONE_KB * 16, 10, 3, (int) size,false);
             }
 
             @Override
@@ -68,7 +68,7 @@ public class ControllerTest {
             }
         };
         StorageFactory mockStorageFactory = TestUtils.getMockStorageFactory(20 * FileUtils.ONE_MB);
-        Controller controller = new Controller(url, null, configuration, 10, BasicSegmentCalculator.getInstance(), handler,
+        Controller controller = new Controller(url, null, configuration, 10, SimpleSegmentCalculator.getInstance(), handler,
                 mockStorageFactory);
         //i expect the download to be done with one thread
         //i have 10mb with max concurrency 10 => 1 mb by thread but i do not have range request so no concurrency will be on
@@ -162,7 +162,7 @@ public class ControllerTest {
         Configuration configuration = new Configuration() {
             @Override
             public DownloaderConfiguration getDownloaderConfiguration() {
-                return TestUtils.getMockDownloaderConfiguration(FileUtils.ONE_MB, FileUtils.ONE_MB * 2, 10, 3, (int) size);
+                return TestUtils.getMockDownloaderConfiguration(FileUtils.ONE_MB, FileUtils.ONE_MB * 2, 10, 3, (int) size,false);
             }
 
             @Override
@@ -171,7 +171,7 @@ public class ControllerTest {
             }
         };
         Controller controller = new Controller(url, null, configuration, 2,
-                BasicSegmentCalculator.getInstance(), handler, TestUtils.getMockStorageFactory(size));
+                SimpleSegmentCalculator.getInstance(), handler, TestUtils.getMockStorageFactory(size));
 
         //i expect the download to be done with 2 thread
         //i have 10mb with max concurrency 2 => 5 mb by thread but i do have a limit on the segment size
@@ -208,7 +208,7 @@ public class ControllerTest {
         Configuration configuration = new Configuration() {
             @Override
             public DownloaderConfiguration getDownloaderConfiguration() {
-                return TestUtils.getMockDownloaderConfiguration(FileUtils.ONE_KB, FileUtils.ONE_KB * 16, 10, 3, (int) size);
+                return TestUtils.getMockDownloaderConfiguration(FileUtils.ONE_KB, FileUtils.ONE_KB * 16, 10, 3, (int) size,false);
             }
 
             @Override
@@ -249,7 +249,7 @@ public class ControllerTest {
 
 
         };
-        Controller controller = new Controller(url, null, configuration, 10, BasicSegmentCalculator.getInstance(), handler,
+        Controller controller = new Controller(url, null, configuration, 10, SimpleSegmentCalculator.getInstance(), handler,
                 TestUtils.getMockStorageFactory(size));
         //i expect the download to be done with one thread
         //i have 10mb with max concurrency 10 => 1 mb by thread but i do not have range request so no concurrency will be on

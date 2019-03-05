@@ -28,9 +28,10 @@ public class HttpProtocolHandler implements ProtocolHandler {
     private static final int RETRY = 2;
 
     private DefaultHttpRequestRetryHandler retryhandler = new DefaultHttpRequestRetryHandler(RETRY, true);
-    //TODO keep the connection alive, verify the multithread issues
-    //TODO somebody must close the client as well
-    private final CloseableHttpClient httpclient = HttpClients.custom()
+    //TODO keep the connection alive,
+    // verify the multithread issues
+    //  see how to reuse the same client
+    private  CloseableHttpClient httpclient  = HttpClients.custom()
             .setRetryHandler(retryhandler).build();
 
 
@@ -143,6 +144,14 @@ public class HttpProtocolHandler implements ProtocolHandler {
         }
     }
 
+    @Override
+    public void close() {
+        try {
+            httpclient.close();
+        } catch (IOException e) {
+            logger.error("IOexception while close CloseableHttpClient",e);
+        }
+    }
 
 
 }

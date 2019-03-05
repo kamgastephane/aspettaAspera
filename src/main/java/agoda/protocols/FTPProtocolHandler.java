@@ -259,4 +259,8 @@ public class FTPProtocolHandler implements ProtocolHandler {
             }
         }
     }
+    @Override
+    public void close() {
+       cleanup();
+    }
 }

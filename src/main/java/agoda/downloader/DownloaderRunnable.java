@@ -20,17 +20,6 @@ public class DownloaderRunnable implements Runnable {
     private LinkedBlockingQueue<ResultMessage> queue;
     private DownloadBlock block;
     private int writeCount = 0;
-
-    //TODO use correlationID in the logs
-    DownloaderRunnable(Segment segment, ProtocolHandler protocolHandler, LinkedBlockingQueue<ResultMessage> resultMessageBlockingQueue) {
-
-
-        this.handler = protocolHandler;
-        block = new DownloadBlock(segment);
-        queue = resultMessageBlockingQueue;
-
-
-    }
     private ProgressListener consumer = new ProgressListener() {
         @Override
         public boolean consume(byte[]bytes) throws DownloadException {
@@ -75,7 +64,16 @@ public class DownloaderRunnable implements Runnable {
             }
         };
     };
+    //TODO use correlationID in the logs
+    DownloaderRunnable(Segment segment, ProtocolHandler protocolHandler, LinkedBlockingQueue<ResultMessage> resultMessageBlockingQueue) {
 
+
+        this.handler = protocolHandler;
+        block = new DownloadBlock(segment);
+        queue = resultMessageBlockingQueue;
+
+
+    }
 
     @Override
     public void run() {
@@ -83,15 +81,14 @@ public class DownloaderRunnable implements Runnable {
         // i should define which download method should be used
         // if the chunk size is 0 we use the direct download otherwise we use the Range based download
         boolean useRangeRequest = false;
-        if(block.getRequestRange()>0)
-        {
+        if (block.getRequestRange() > 0) {
             useRangeRequest = true;
         }
         block.setStatus(DownloadStatus.DOWNLOADING);
 
         while (!Thread.currentThread().isInterrupted() && block.getStatus() == DownloadStatus.DOWNLOADING) {
             long start = block.getStartPosition();
-            long end = start + block.getRequestRange() -1;
+            long end = start + block.getRequestRange() - 1;
 
             try {
 
@@ -99,18 +96,16 @@ public class DownloaderRunnable implements Runnable {
                 writeCount = 0;
 
                 Instant now = Instant.now();
-                if(useRangeRequest)
-                {
-                    handler.download(block.getSrcUrl(),start,end, consumer);
-                }else {
+                if (useRangeRequest) {
+                    handler.download(block.getSrcUrl(), start, end, consumer);
+                } else {
                     handler.download(block.getSrcUrl(), consumer);
                 }
 
                 Instant then = Instant.now();
-                Duration duration = Duration.between(now,then);
+                Duration duration = Duration.between(now, then);
 
-                if (writeCount==0)
-                {
+                if (writeCount == 0) {
                     //nothing was written to the disk, something maybe went wrong, i handle it as an error
                     block.update(0);
                 }
@@ -122,18 +117,17 @@ public class DownloaderRunnable implements Runnable {
                 block.setLastError(e);
                 Throwable ancestor = e;
                 boolean foundInterruptedException = false;
-                while ( ancestor.getCause() != null && e.getCause() != e)
-                {
+                while (ancestor.getCause() != null && e.getCause() != e) {
 
                     ancestor = ancestor.getCause();
-                    if(ancestor instanceof InterruptedException)
-                    {
+                    if (ancestor instanceof InterruptedException) {
                         logger.error("Interrupted exception while pushing message to manager with status " + block.getStatus().toString(), e);
                         foundInterruptedException = true;
                         break;
                     }
                 }
-                if (foundInterruptedException){
+                if (foundInterruptedException) {
+                    block.setStatus(DownloadStatus.ERROR);
                     break;
                 }
 
@@ -147,7 +141,7 @@ public class DownloaderRunnable implements Runnable {
         //when i get here i am either interrupted, in an error state or finished state
 
         ResultMessage resultMessage = new ResultMessage(block.getSegmentIndex(),
-                block.getStatus(),block.getRate());
+                block.getStatus(), block.getRate());
 
         try {
             queue.put(resultMessage);
@@ -158,5 +152,6 @@ public class DownloaderRunnable implements Runnable {
 
     }
 
-
 }
+
+

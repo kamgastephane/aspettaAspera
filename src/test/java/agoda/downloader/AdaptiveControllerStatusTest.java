@@ -7,12 +7,11 @@ import java.util.List;
 
 import static org.junit.Assert.*;
 
-public class NetworkAwareControllerStatusTest {
+public class AdaptiveControllerStatusTest {
     @Test
-    public void testThatget_TheNextSegmentToDownload_RespectTheAllowedAccuracy()
+    public void theAdaptiveSegmentSchedulerShouldRespectTheAllowedAccuracy()
     {
-        ControllerStatus.Builder builder = new ControllerStatus.Builder();
-        builder = builder.init(5);
+        ControllerStatus status = new ControllerStatus(5, new AdaptiveSegmentScheduler());
         for (int i = 0; i < 10; i++) {
             Segment segment = new Segment.SegmentBuilder()
                     .setSegmentIndex(i)
@@ -35,10 +34,8 @@ public class NetworkAwareControllerStatusTest {
                 }
             };
 
-            builder.add(segment,TestUtils.getMockLazyStorage(storage));
+            status.add(segment,TestUtils.getMockLazyStorage(storage));
         }
-        NetworkAwareControllerStatus status = new NetworkAwareControllerStatus(builder.build());
-
         List<Segment> next = status.getNext();
 
         assertEquals(1, next.size());
@@ -82,10 +79,9 @@ public class NetworkAwareControllerStatusTest {
 
 
     @Test
-    public void testThatget_TheNextSegmentToDownload_CorrespondTOThePreviousRate()
+    public void theAdaptiveSegmentSchedulerShouldUsePreviousTheDownloadRateToDetermineHowManySegmentToLaunch()
     {
-        ControllerStatus.Builder builder = new ControllerStatus.Builder();
-        builder = builder.init(5);
+        ControllerStatus status = new ControllerStatus(5, new AdaptiveSegmentScheduler(20,20,1,1));
         for (int i = 0; i < 20; i++) {
             Segment segment = new Segment.SegmentBuilder()
                     .setSegmentIndex(i)
@@ -108,9 +104,8 @@ public class NetworkAwareControllerStatusTest {
                 }
             };
 
-            builder.add(segment,TestUtils.getMockLazyStorage(storage));
+            status.add(segment,TestUtils.getMockLazyStorage(storage));
         }
-        NetworkAwareControllerStatus status = new NetworkAwareControllerStatus(builder.build());
 
         List<Segment> firstGroup = status.getNext();
 
@@ -162,14 +157,14 @@ public class NetworkAwareControllerStatusTest {
         status.incConcurrency();
         status.incConcurrency();
 
-        // i performed well again with  elements i can increase
+        // i performed well again with 1 element i can increase
         List<Segment> sixth = status.getNext();
-        assertEquals(2, sixth.size());
-        setFinishedWithRate(sixth,61);
+        assertEquals(1, sixth.size());
+        setFinishedWithRate(sixth,121);
 
         // i performed well again with  elements i can increase
         List<Segment> seventh = status.getNext();
-        assertEquals(3, seventh.size());
+        assertEquals(2, seventh.size());
 
 
 

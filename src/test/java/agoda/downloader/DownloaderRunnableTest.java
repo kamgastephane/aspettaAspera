@@ -77,12 +77,12 @@ public class DownloaderRunnableTest {
 
         ThreadPoolExecutor service = (ThreadPoolExecutor) Executors.newFixedThreadPool(1);
         Future future = service.submit(runnable);
-        TimeUnit.SECONDS.sleep(2);
+        TimeUnit.SECONDS.sleep(1);
         future.cancel(true);
         TimeUnit.SECONDS.sleep(2);
-        assert service.getActiveCount() == 0;
 
         ResultMessage message = queue.take();
+
         assert message.getStatus().equals(DownloadStatus.ERROR);
 
 
@@ -191,9 +191,9 @@ public class DownloaderRunnableTest {
         }
         assert message.getStatus().equals(DownloadStatus.FINISHED);
 
-        //as i am downloading at approx 8kbit/s, i expect a precision at 0.1%
+        //as i am downloading at approx 8kbytes/s, i expect a precision at 0.1%
         System.out.println(message.getRate());
-        assert Math.abs((message.getRate()-8)) < 0.1;
+        assert Math.abs((message.getRate()-1)) < 0.01;
 
 
 

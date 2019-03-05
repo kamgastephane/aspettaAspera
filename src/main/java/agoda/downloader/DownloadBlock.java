@@ -37,8 +37,13 @@ public class DownloadBlock extends Segment {
     }
 
     public double   getRate() {
-        double totalevent = rates.stream().mapToDouble(f -> f).sum();
-        return totalevent / rates.size();
+        if(rates.size() > 0)
+        {
+            double totalevent = rates.stream().mapToDouble(f -> f).sum();
+            return totalevent / rates.size();
+        }
+        return 0;
+
     }
 
     void update(long range) {

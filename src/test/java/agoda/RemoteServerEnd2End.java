@@ -3,7 +3,7 @@ package agoda;
 import agoda.configuration.Configuration;
 import agoda.configuration.DownloaderConfiguration;
 import agoda.configuration.StorageConfiguration;
-import agoda.downloader.BasicSegmentCalculator;
+import agoda.downloader.SimpleSegmentCalculator;
 import agoda.downloader.Controller;
 import agoda.downloader.DownloadException;
 import agoda.downloader.TestUtils;
@@ -24,7 +24,7 @@ import java.lang.management.ManagementFactory;
 import java.lang.management.MemoryUsage;
 import java.util.HashMap;
 
-public class RemoteServerIT {
+public class RemoteServerEnd2End {
 
 
     //This can be used for end 2 end http://speedtest.tele2.net => 90.130.70.73
@@ -32,10 +32,7 @@ public class RemoteServerIT {
     private  File tempDirectory;
     @Before
     public void setUp() throws Exception {
-
-
         tempDirectory = TestStorageUtils.getTempDirectory();
-//        System.setProperty("", "false");
     }
     @After
     public void tearDown() throws Exception {
@@ -54,7 +51,7 @@ public class RemoteServerIT {
         connectionParams.put("port","21");
 
         ProtocolHandler protocolHandler = ProtocolHandlerFactory.get(url);
-        DownloaderConfiguration mockDownloaderConfiguration = TestUtils.getMockDownloaderConfiguration(FileUtils.ONE_MB, FileUtils.ONE_MB * 100, 1, 2, (int) (FileUtils.ONE_MB * 100));
+        DownloaderConfiguration mockDownloaderConfiguration = TestUtils.getMockDownloaderConfiguration(FileUtils.ONE_MB, FileUtils.ONE_MB * 100, 1, 2, (int) (FileUtils.ONE_MB * 100),false);
         StorageFactory storageFactory = StorageFactoryImpl.getInstance();
 
         StorageConfiguration storageConfiguration = new StorageConfiguration() {
@@ -79,19 +76,17 @@ public class RemoteServerIT {
                 return storageConfiguration;
             }
         };
-        BasicSegmentCalculator segmentCalculator = BasicSegmentCalculator.getInstance();
+        SimpleSegmentCalculator segmentCalculator = SimpleSegmentCalculator.getInstance();
         Controller controller = new Controller(url, connectionParams,configuration,1,
                 segmentCalculator,protocolHandler,storageFactory);
         controller.setup();
         controller.run();
 
         File zipFile = new File(tempDirectory.getAbsolutePath(),"100MB.zip");
-        byte[] musicBytes = FileUtils.readFileToByteArray(zipFile);
+        byte[] bytes = FileUtils.readFileToByteArray(zipFile);
 
 
-        Assert.assertEquals(musicBytes.length, 100 * FileUtils.ONE_MB);
-
-
+        Assert.assertEquals(bytes.length, 100 * FileUtils.ONE_MB);
 
     }
 
@@ -100,7 +95,7 @@ public class RemoteServerIT {
 
         String url = "http://speedtest.tele2.net/1GB.zip";
         ProtocolHandler protocolHandler = ProtocolHandlerFactory.get(url);
-        DownloaderConfiguration mockDownloaderConfiguration = TestUtils.getMockDownloaderConfiguration(FileUtils.ONE_MB *50, FileUtils.ONE_MB * 100, 5, 2, (int) (FileUtils.ONE_MB * 2));
+        DownloaderConfiguration mockDownloaderConfiguration = TestUtils.getMockDownloaderConfiguration(FileUtils.ONE_MB *50, FileUtils.ONE_MB * 100, 5, 2, (int) (FileUtils.ONE_MB * 2),false);
         StorageFactory storageFactory = StorageFactoryImpl.getInstance();
 
         StorageConfiguration storageConfiguration = new StorageConfiguration() {
@@ -125,7 +120,7 @@ public class RemoteServerIT {
                 return storageConfiguration;
             }
         };
-        BasicSegmentCalculator segmentCalculator = BasicSegmentCalculator.getInstance();
+        SimpleSegmentCalculator segmentCalculator = SimpleSegmentCalculator.getInstance();
         Controller controller = new Controller(url, new HashMap<>(),configuration,10,
                 segmentCalculator,protocolHandler,storageFactory);
         controller.setup();
@@ -137,10 +132,8 @@ public class RemoteServerIT {
         System.out.println("heap size in MB: "+l);
         assert l < 100;
 
-
-
-
-
-
     }
+
+
+
 }

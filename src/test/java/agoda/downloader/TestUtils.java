@@ -38,7 +38,7 @@ public class TestUtils {
         };
     }
 
-    public static DownloaderConfiguration getMockDownloaderConfiguration(long minSize, long maxSize, int maxConcurrency, int maxRetry, int chunsize)
+    public static DownloaderConfiguration getMockDownloaderConfiguration(long minSize, long maxSize, int maxConcurrency, int maxRetry, int chunsize,boolean useAdaptiveSegmentScheduler)
     {
         return new DownloaderConfiguration() {
             @Override
@@ -64,6 +64,11 @@ public class TestUtils {
             @Override
             public int getChunkSize() {
                 return chunsize;
+            }
+
+            @Override
+            public boolean useAdaptiveScheduler() {
+                return useAdaptiveSegmentScheduler;
             }
         };
     }
