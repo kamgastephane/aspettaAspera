@@ -407,11 +407,7 @@ public class DownloaderRunnableTest {
 
 
     }
-    @Test
-    public void testTheRateOfTheDownloadIsCalculatedPropertly()
-    {
-        //TODO
-    }
+
     @Test
     public  void testThatEvenIfTheProtocollSendDataBiggerThanTheSegmentSize_IcanTruncateItCorrectly() throws InterruptedException {
         int maxRetry = 5;

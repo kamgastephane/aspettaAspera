@@ -60,7 +60,6 @@ public class FTPProtocolHandler implements ProtocolHandler {
     }
     @Override
     public void download(String url, Map<String, String> parameters, ProgressListener consumer) throws DownloadException {
-        //TODO test this
         FTPParameter connectionParams = parse(parameters);
         if(RandomDowloaderUtils.IsNullOrWhiteSpace(connectionParams.username))
         {
@@ -208,7 +207,7 @@ public class FTPProtocolHandler implements ProtocolHandler {
         {
             return null;
         }
-        //TODO verify the acceptRestart Feature with a real world server
+        //TODO verify  if the acceptRestart Feature with a real world server can be used for multithreading
 //        try {
 //            acceptRestartFeature = client.hasFeature(FTPCmd.RESTART.getCommand());
 //        } catch (IOException e) {

@@ -47,7 +47,9 @@ Inside the project folder at _download/project/agoda_, you can launch the test s
  ```
  
 ### Integration tests
-This test require access to the file system as well as access to the network
+
+This test suite require access to the file system as well as access to the network
+Using this command, both unit and integration test are ran.
 ```
  mvn integration-test -DskipTests=false
 ```

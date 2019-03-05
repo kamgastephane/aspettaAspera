@@ -43,13 +43,11 @@ public class ControllerStatus {
             return segment;
         });
     }
-    //TODO fix this
     HashMap<Integer, StorageSupplier> getStorageList() {
         return storageList;
     }
 
 
-    //TODO fix this
     HashMap<Integer, Segment> getSegmentList() {
         return segmentList;
     }
