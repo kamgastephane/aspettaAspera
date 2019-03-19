@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/kamgastephane/aspettaAspera.svg?branch=master)](https://travis-ci.org/kamgastephane/aspettaAspera)
+
 # AspettaAspera (aspetta e spera)
 
 AspettaAspera (italian for "**wait and see**"  ) is just another file downloader.
