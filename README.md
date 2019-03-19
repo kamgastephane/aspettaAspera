@@ -1,9 +1,9 @@
 # AspettaAspera (aspetta e spera)
 
 AspettaAspera (italian for "**wait and see**"  ) is just another file downloader.
-Currently it support well HTTP, with multi-thread download and
+Currently it supports well the HTTP protocol, with multi-thread download and
 variable chunk size (through configuration).
-A basic implementation for FTP is provided as well
+A basic implementation for FTP is provided as well.
 
 
 ## Getting Started
