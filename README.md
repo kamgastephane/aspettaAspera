@@ -1,6 +1,10 @@
-# RandomDownloader
+# AspettaAspera (aspetta e spera)
 
-Just another file downloader
+AspettaAspera (italian for "**wait and see**"  ) is just another file downloader.
+Currently it support well HTTP, with multi-thread download and
+variable chunk size (through configuration).
+A basic implementation for FTP is provided as well
+
 
 ## Getting Started
 These instructions will get you a copy of the project up and running on your local machine for development and testing purposes
@@ -19,14 +23,14 @@ The following test was done on a UNIX environment. Some changes may apply for Wi
 
 First thing first, you should download the project and save it inside a known folder
 We will then navigate to this folder using the command line
-Let suppose the files of the project are saved inside our disk at: _download/project/agoda_
+Let suppose the files of the project are saved inside our disk at: _download/project/aspettaaspera_
 
 ```
 $ cd 
-$ cd download/project/agoda
+$ cd download/project/aspettaaspera
 ```
 
-Our command line  should be inside our project folder.
+Our command line location should be inside our project folder.
 
 ### Build
 
@@ -41,7 +45,7 @@ The previous command automatically ran the test and build our source files
 
 ### Unit tests
 
-Inside the project folder at _download/project/agoda_, you can launch the test suite as a standalone using the command
+Inside the project folder at _download/project/aspettaaspera_, you can launch the test suite as a standalone using the command
  ```
  $ mvn test
  ```
@@ -55,7 +59,7 @@ Using this command, both unit and integration test are ran.
 ```
 
 Losgs file containing the result of the test suite can be found at 
- inside the **target** folder located inside our disk at path:  _download/project/agoda/target_
+ inside the **target** folder located inside our disk at path:  _download/project/aspettaaspera/target_
 
 ##running the app
 
@@ -65,15 +69,16 @@ This can be done using the following command
  ```
  $  mvn clean compile assembly:single
  ```
- inside the **target** folder located at path _download/project/agoda/target_
+ inside the **target** folder located at path _download/project/aspettaaspera/target_
  you can find the new generated JAR file named: _downloader-1.0-SNAPSHOT.jar_
  The application can be launched in two different ways:
  
       
 #### Launching the program 
 
-We should provide to the application the path to the configuration file with the alias -c.
-An example of a configuration file can be found inside the project with the name config.yaml
+We should provide to the application the path to the configuration file with the alias  ```-c ```
+An example of a configuration file can be found inside the project with the name config.yaml. 
+
 Finally we can then provide a list of resource we would like to download.
 Currently HTTP is supported, FTP support is experimental
 e.g.
@@ -104,5 +109,5 @@ V1.0
 
 ## Acknowledgments
 
-* Hat tip to StackOverflow
+* Hat tip to StackOverflow, Agoda
 

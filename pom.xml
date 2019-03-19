@@ -7,18 +7,18 @@
 
   <modelVersion>4.0.0</modelVersion>
 
-  <groupId>agoda</groupId>
-  <artifactId>downloader</artifactId>
+  <groupId>aspettaAspera</groupId>
+  <artifactId>Downloader</artifactId>
   <version>1.0-SNAPSHOT</version>
 
-  <name>randomDownloader</name>
-  <url>http://www.agoda.com</url>
+  <name>aspettaAspera</name>
+  <url>http://www.aspettaAspera.com</url>
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <maven.compiler.source>1.7</maven.compiler.source>
     <maven.compiler.target>1.7</maven.compiler.target>
-    <skipTests>true</skipTests>
+    <skipTests>false</skipTests>
     <jetty.version>9.4.15.v20190215</jetty.version>
     <jackson-annotations-version>2.9.8</jackson-annotations-version>
     <jackson.version.core>2.9.8</jackson.version.core>
@@ -72,6 +72,7 @@
       <groupId>org.eclipse.jetty</groupId>
       <artifactId>jetty-servlet</artifactId>
       <version>${jetty.version}</version>
+      <scope>test</scope>
     </dependency>
 
     <dependency>
@@ -144,6 +145,7 @@
         <plugin>
           <artifactId>maven-surefire-plugin</artifactId>
           <version>3.0.0-M3</version>
+
         </plugin>
 
         <plugin>
@@ -170,7 +172,7 @@
             <appendAssemblyId>false</appendAssemblyId>
             <archive>
                 <manifest>
-                  <mainClass>agoda.App</mainClass>
+                  <mainClass>aspettaaspera.App</mainClass>
                 </manifest>
               </archive>
               <descriptorRefs>
